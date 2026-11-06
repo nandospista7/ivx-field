@@ -328,24 +328,32 @@ const myName=()=>LS.get('name','');
 const mapsKey=()=>(LS.get('mapsKey','')||CFG.MAPS_KEY||'').trim();
 function persist(){LS.set('recs',recs);LS.set('outbox',outbox)}
 function defaultConfig(){return{
-  products:[],
+  products:[
+    {id:'e150-pp',name:'Pineapple Peach',line:'ENERGY.150',casePrice:26,unitsPerCase:12,srp:''},
+    {id:'e150-br',name:'Blue Raspberry',line:'ENERGY.150',casePrice:26,unitsPerCase:12,srp:''},
+    {id:'e730-wm',name:'Watermelon Mint',line:'ENDURE.730',casePrice:26,unitsPerCase:12,srp:''},
+    {id:'e730-pa',name:'Pomegranate Açaí',line:'ENDURE.730',casePrice:26,unitsPerCase:12,srp:''}],
   pitch:{sellSheetUrl:'',points:[
-    'Made in NYC by the team behind Iron Vault gym.',
-    '[What it is in one line — e.g. energy + hydration, key ingredients, calories, sugar]',
-    '[Who buys it — gym-goers, students, office workers, construction crews]',
-    'Store margin: see the price sheet above — you make about {margin} on every can at the suggested price.',
-    'Low-risk start: one case to test. [Say what you offer if it doesn\'t move — swap flavors, restock visit, etc.]',
-    'We\'re pushing it on TikTok — shoppers will come in asking for it. [Mention follower count / recent views]'],
+    'Energy + hydration in one system. ENERGY.150: 150mg caffeine from green tea, 215mg electrolytes, B vitamins. ENDURE.730: 730mg electrolytes, caffeine-free.',
+    '0g added sugar, 15 calories. Sweetened with Reb M. No sucralose.',
+    'Non-carbonated: no bubbles, easy to drink mid-workout.',
+    'Built for runners, lifters and endurance athletes. 4.9 stars from 2,140 reviews, 100K+ athletes fueled, 40+ run club partners.',
+    'Sodium-forward with Utah sea minerals for real sweat loss.',
+    'Four flavors: Pineapple Peach and Blue Raspberry (ENERGY.150), Watermelon Mint and Pomegranate Açaí (ENDURE.730). 16 oz cans.',
+    '$26 a case of 12 ($2.17 a can). 2-year shelf life, so no spoilage risk. Store margin: {margin}.',
+    'Samples available: leave a can so the owner can taste it.'],
    objections:{
-    'Price too high':'Walk the margin: they pay {unitCost} a can, it sells at {srp} — that\'s {margin} per can. Offer to start with one case so it\'s a small bet.',
-    'No shelf / cooler space':'Ask for just one facing next to the energy drinks, or one cooler slot for two weeks. If it doesn\'t sell, you\'ll swap it out.',
-    'Has competitor':'Position as the healthier / local option next to the big brands — different shopper, not a replacement. Leave samples so they can taste the difference.',
-    'Not interested':'Leave a sample and sell sheet, get the owner\'s name and best time to come back. Ask what does sell well in their cooler.',
-    'Owner not in':'Get the owner\'s name, cell and when they\'re in. Leave a sample and sell sheet with the counter person. Set a follow-up date.',
-    'Overstocked':'Set a follow-up for 2–3 weeks. Leave a sample so it\'s top of mind when they reorder.',
+    'Price too high':'Wholesale is {unitCost} a can ($26 a case of 12). At {srp} on the shelf the store makes {margin} per can, and the 2-year shelf life means no spoilage. Offer to start with one case.',
+    'No shelf / cooler space':'Ask for one facing next to the energy drinks, or one cooler slot for two weeks. It\'s a 16 oz can, so it fits where the big energy drinks go.',
+    'Has competitor':'It\'s a different drink: non-carbonated, 0g added sugar, no sucralose, plus a caffeine-free hydration line (ENDURE.730) most coolers don\'t carry. It brings in the gym and run-club crowd.',
+    'Not interested':'Leave a sample can and the sell sheet, get the owner\'s name and the best time to come back. Ask what sells best in their cooler.',
+    'Owner not in':'Get the owner\'s name, cell and when they\'re in. Leave a sample can with the counter person. Set a follow-up date.',
+    'Overstocked':'Set a follow-up for 2–3 weeks. Leave a sample so it\'s top of mind when they reorder. 2-year shelf life means stock won\'t go bad.',
     'Come back later':'Pin down a day and time and set the follow-up date before you leave.',
-    'Store closed':'Mark it, move on — it stays on the follow-up list.'}},
-  settings:{qrUrl:'',reorderDays:14,followUpDays:3,reportEmail:'',reportHour:19}}}
+    'Store closed':'Mark it and move on. It stays on the follow-up list.'}},
+  settings:{qrUrl:'',reorderDays:14,followUpDays:3,reportEmail:'',reportHour:19,
+    receiptFooter:'Thank you for carrying IV-X! Reorders & questions: Nando Spista · 914-589-5272 · nando@drinkivx.com · drinkivx.com'}}}
+if(!config.products||!config.products.length){const d=defaultConfig();config.products=d.products;if(!config.pitch||!(config.pitch.points||[]).length||String((config.pitch.points||[])[1]||'').startsWith('[')) config.pitch=d.pitch;config.settings=Object.assign({},d.settings,config.settings||{});if(!config.settings.receiptFooter)config.settings.receiptFooter=d.settings.receiptFooter;}
 const P=()=>config.products||[];
 const S=()=>Object.assign({reorderDays:14,followUpDays:3},config.settings||{});
 
@@ -725,7 +733,7 @@ function receiptText(r){const{tot,paid,bal}=invoiceBalance(r);
   L.push('',`Total: ${money(tot)}`);
   if(bal<=0.004)L.push(`Paid in full${r.payMethod?' ('+r.payMethod+')':''}. Thank you!`);
   else{if(paid)L.push(`Paid: ${money(paid)}`);L.push(`Balance due: ${money(bal)}${r.dueDate?' by '+fmtDate(r.dueDate):''} (${TERMS[r.terms]||'Due'})`)}
-  L.push('',(S().receiptFooter||'Thank you for carrying IV-X!')+(myName()?' — '+myName():''));return L.join('\n')}
+  {const f=S().receiptFooter||'Thank you for carrying IV-X!';L.push('',f+(myName()&&!f.toLowerCase().includes(String(myName()).toLowerCase())?' — '+myName():''))}return L.join('\n')}
 function openReceipt(id){const r=recs[id];if(!r)return;cur=null;const t=receiptText(r);const ph=String(r.contactPhone||r.phone||'').replace(/[^\d+]/g,'').slice(0,15);
   const sh=$('#sheet');sh.innerHTML=`<div class="grab"></div><h2>Receipt · ${esc(r.invoiceNo)}</h2><div class="sub">${esc(r.store)}</div><pre class="rcpt">${esc(t)}</pre>
    <div class="btnrow"><a class="btn2 dark" href="sms:${ph}?&body=${encodeURIComponent(t)}">${I('message')} Text</a><a class="btn2" href="mailto:?subject=${encodeURIComponent('IV-X receipt '+r.invoiceNo)}&body=${encodeURIComponent(t)}">${I('file')} Email</a></div>
@@ -803,7 +811,7 @@ function drawSheet(){
   if(stx)o+=`<div class="stx">${I('chart')} Sells about <b>${Math.round(stx.perWeek)} cans/week</b> <span class="m">(last ${stx.days} days)</span></div>`;
   o+=`<div class="lab">Outcome</div><div class="outs">${['sold','no','fu','skip'].map(k=>`<button data-s="${k}" class="${draft.status===k?'on':''}">${k==='sold'?I('check')+' Sold':k==='no'?I('x')+' No sale':k==='fu'?I('refresh')+' Follow up':I('minus')+' Closed / skip'}</button>`).join('')}</div>`;
   if(saleish){
-    if(hasP){o+=`<div class="lab">Order ${draft.status==='fu'?'(if any)':''}</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b><div class="m">${p.casePrice?money(p.casePrice)+'/cs':''}${p.unitsPerCase?' · '+p.unitsPerCase+'/cs':''}${vanAvail(p.id,v)}</div></div><div class="step sm"><button data-dq="${esc(p.id)}" data-d="-1">−</button><span class="qv">${qtyOf(p.id)}</span><button data-dq="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
+    if(hasP){o+=`<div class="lab">Order ${draft.status==='fu'?'(if any)':''}</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b><div class="m">${p.line?esc(p.line)+' · ':''}${p.casePrice?money(p.casePrice)+'/cs':''}${p.unitsPerCase?' · '+p.unitsPerCase+'/cs':''}${vanAvail(p.id,v)}</div></div><div class="step sm"><button data-dq="${esc(p.id)}" data-d="-1">−</button><span class="qv">${qtyOf(p.id)}</span><button data-dq="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
       <div class="otot"><span>${orderCases()} cases</span><b>${money(orderTotal())}</b></div></div>`}
     else o+=`<div class="lab">Cases ${draft.status==='fu'?'(if any)':''}</div><div class="step"><button data-c="-1">−</button><input id="cs" type="number" inputmode="numeric" min="0" value="${draft.cases}"><button data-c="1">+</button></div>
       <div class="lab">What they bought</div><input id="bought" type="text" placeholder="Flavors, e.g. 2 cs Lemon, 1 cs Berry" value="${esc(draft.bought)}"><div class="m" style="margin-top:4px">Tip: add your flavors and prices in Settings → Products to get a tap-to-order form.</div>`;
@@ -941,7 +949,7 @@ function bindDueSeg(){$('#dseg').querySelectorAll('button').forEach(b=>b.onclick
 function renderPitch(){
   const p=config.pitch||{},prods=P();
   let o=`<div class="sum">`;
-  o+=`<div class="sec" style="margin-top:0"><h4>Price sheet</h4>${prods.length?`<table class="ptab"><tr><th>Flavor</th><th>Case</th><th>Per can</th><th>Shelf</th><th>Store makes</th></tr>${prods.map(x=>{const m=marginOf(x),u=unitCost(x);return`<tr><td><b>${esc(x.name)}</b>${x.unitsPerCase?`<div class="m">${x.unitsPerCase}/case</div>`:''}</td><td>${x.casePrice?money(x.casePrice):'—'}</td><td>${u!=null?money(u):'—'}</td><td>${x.srp?money(x.srp):'—'}</td><td>${m?`<b style="color:var(--sold)">${money(m.per)}</b><div class="m">${Math.round(m.pct*100)}%</div>`:'—'}</td></tr>`}).join('')}</table>`:`<div class="it">No flavors yet — add them in <b>Settings → Products</b> to fill this in and turn on the tap-to-order form.</div>`}</div>`;
+  o+=`<div class="sec" style="margin-top:0"><h4>Price sheet</h4>${prods.length?`<table class="ptab"><tr><th>Flavor</th><th>Case</th><th>Per can</th><th>Shelf</th><th>Store makes</th></tr>${prods.map(x=>{const m=marginOf(x),u=unitCost(x);return`<tr><td><b>${esc(x.name)}</b><div class="m">${x.line?esc(x.line)+' · ':''}${x.unitsPerCase?x.unitsPerCase+'/case':''}</div></td><td>${x.casePrice?money(x.casePrice):'—'}</td><td>${u!=null?money(u):'—'}</td><td>${x.srp?money(x.srp):'—'}</td><td>${m?`<b style="color:var(--sold)">${money(m.per)}</b><div class="m">${Math.round(m.pct*100)}%</div>`:'—'}</td></tr>`}).join('')}</table>`:`<div class="it">No flavors yet — add them in <b>Settings → Products</b> to fill this in and turn on the tap-to-order form.</div>`}</div>`;
   if(p.sellSheetUrl)o+=`<a class="gbtn" style="margin-top:12px" href="${esc(p.sellSheetUrl)}" target="_blank" rel="noopener">${I('file')} Open sell sheet</a>`;
   o+=`<div class="sec"><h4>Talking points</h4>${(p.points||[]).map(t=>`<div class="it">• ${esc(fillTokens(t))}</div>`).join('')||'<div class="it">Add talking points in Settings → Pitch kit.</div>'}</div>`;
   o+=`<div class="sec"><h4>When they say…</h4>${Object.entries(p.objections||{}).filter(x=>x[1]).map(([r,t])=>`<div class="it"><b>${esc(r)}</b><div class="m" style="font-size:13px;color:#333">${esc(fillTokens(t))}</div></div>`).join('')}</div>`;
