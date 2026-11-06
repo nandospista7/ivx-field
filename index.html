@@ -119,8 +119,9 @@ textarea{min-height:70px;resize:vertical}
 .gear{all:unset;cursor:pointer;font-size:18px;padding:2px 4px;margin-left:8px;color:#cfd2d8}
 .setbox{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 14px}
 .setbox summary{list-style:none;cursor:pointer}.setbox summary::-webkit-details-marker{display:none}
-.setbox summary h3{margin:0;font-size:16px;display:flex;justify-content:space-between}.setbox summary h3:after{content:'▾';color:#aaa}
-.setbox[open] summary h3:after{content:'▴'}
+.setbox summary h3{margin:0;font-size:15.5px;display:flex;align-items:center;gap:10px}.setbox summary h3 .i{width:18px;height:18px;color:#0f766e}
+.setbox summary h3:after{content:'';margin-left:auto;width:8px;height:8px;border-right:2px solid #aaa;border-bottom:2px solid #aaa;transform:rotate(45deg);margin-top:-4px;transition:transform .15s}
+.setbox[open] summary h3:after{transform:rotate(-135deg);margin-top:4px}
 .setbox p{margin:8px 0 10px;color:var(--mute);font-size:13px}
 .setbox label.m,.row3 label{display:block;font-size:11.5px;color:var(--mute);font-weight:700}
 .btnrow{display:flex;gap:8px;margin-top:10px}
@@ -168,11 +169,32 @@ input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border
 .lbox h1{font:800 34px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 8px}.lbox h1 span{color:#5eead4}
 .lbox p{color:#a7abb3;font-size:14px;margin:0 0 16px}.lbox input{width:100%;font:inherit;font-size:16px;border:1.5px solid #33363d;background:#1b1e23;color:#fff;border-radius:12px;padding:12px;margin-bottom:10px}
 .lbox .save{background:#5eead4;color:#111}.lmsg{color:#fca5a5;font-size:13px;margin-top:10px;min-height:18px}
+.i{width:1em;height:1em;vertical-align:-.14em;flex:none;display:inline-block}
+.tabs button .ic{display:flex;justify-content:center;margin-bottom:4px;position:relative}.tabs button .ic svg{width:22px;height:22px}.tabs button .ic .i{width:22px;height:22px}
+.tabs button .bdg{position:absolute;top:-4px;left:calc(50% + 6px)}
+.gear svg{width:20px;height:20px}.gear{display:flex;align-items:center}
+.outs button .i{width:16px;height:16px;vertical-align:-3px;margin-right:2px}
+.num .i{width:16px;height:16px;stroke-width:2.6}
+.addph .i{width:24px;height:24px;color:#8a857a}
+.tx .i{width:11px;height:11px;stroke-width:3;vertical-align:0}
+.gcard h4{display:flex;align-items:center;gap:7px}.gcard h4 .i{width:16px;height:16px;color:#1a73e8}
+.chip .i{width:11px;height:11px;vertical-align:-1px}
+.comeback b .i{width:13px;height:13px;vertical-align:-2px}
+.welcome{position:fixed;inset:0;z-index:95;background:#111316;display:none;place-items:center;padding:24px calc(20px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left))}
+.welcome.on{display:grid}.wbox{width:100%;max-width:400px;color:#fff;position:relative;padding-top:40px}
+.wskip{all:unset;cursor:pointer;position:absolute;top:0;right:0;color:#8b9099;font-weight:600;font-size:14px;padding:6px}
+.wicon{width:64px;height:64px;border-radius:18px;background:rgba(94,234,212,.12);color:#5eead4;display:grid;place-items:center;margin-bottom:22px}.wicon .i{width:30px;height:30px;stroke-width:1.8}
+.wstep{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5eead4;margin-bottom:8px}
+.wbox h2{font:800 32px/1.05 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 12px;letter-spacing:.3px}
+.wbox p{color:#b9bdc5;font-size:16px;line-height:1.55;margin:0;min-height:120px}.wbox p b{color:#fff}
+.wdots{display:flex;gap:6px;margin:26px 0}.wdots span{width:7px;height:7px;border-radius:9px;background:#3a3e46;transition:all .2s}.wdots span.on{width:22px;background:#5eead4}
+.wbtns{display:flex;gap:10px}.wbtns button{all:unset;cursor:pointer;text-align:center;padding:15px 0;border-radius:14px;font-weight:800;font-size:16px}
+.wbtns .wnext{flex:1;background:#5eead4;color:#111}.wbtns .wback{width:90px;background:#22252b;color:#fff}
 </style>
 </head>
 <body>
 <header>
- <div class="top"><h1>IV-X <span>Field</span></h1><div style="display:flex;align-items:center"><div class="sync" id="sync"><i></i><span>Starting…</span></div><button class="gear" id="gear" aria-label="Settings">⚙︎</button></div></div>
+ <div class="top"><h1>IV-X <span>Field</span></h1><div style="display:flex;align-items:center"><div class="sync" id="sync"><i></i><span>Starting…</span></div><button class="gear" id="gear" aria-label="Settings"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div></div>
  <div class="days" id="days"></div>
 </header>
 <main>
@@ -191,7 +213,7 @@ input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border
  <section id="v-sum" hidden><div class="sum" id="sum"></div></section>
  <section id="v-set" hidden></section>
 </main>
-<nav class="tabs"><button data-t="route" class="on"><span class="ic">📍</span>Route</button><button data-t="due"><span class="ic">🔁</span>Follow-ups</button><button data-t="pitch"><span class="ic">💬</span>Pitch</button><button data-t="sum"><span class="ic">📊</span>Results</button><button data-t="set"><span class="ic">⚙︎</span>Settings</button></nav>
+<nav class="tabs"><button data-t="route" class="on"><span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Route</button><button data-t="due"><span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span>Follow-ups</button><button data-t="pitch"><span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>Pitch</button><button data-t="sum"><span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></span>Results</button><button data-t="set"><span class="ic"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Settings</button></nav>
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
@@ -266,6 +288,10 @@ function project(pts,W){
 }
 
 /* IV-X Field app v2 — main script. PLAN, DAYS, geography and helpers are injected above. */
+
+// ===================== icons =====================
+const ICONS={"check": "<path d=\"M20 6 9 17l-5-5\"/>", "x": "<path d=\"M18 6 6 18M6 6l12 12\"/>", "refresh": "<path d=\"M21 12a9 9 0 1 1-2.64-6.36L21 8\"/><path d=\"M21 3v5h-5\"/>", "minus": "<path d=\"M5 12h14\"/>", "pin": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/>", "repeat": "<path d=\"m17 2 4 4-4 4\"/><path d=\"M3 11v-1a4 4 0 0 1 4-4h14\"/><path d=\"m7 22-4-4 4-4\"/><path d=\"M21 13v1a4 4 0 0 1-4 4H3\"/>", "message": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "chart": "<path d=\"M3 3v18h18\"/><path d=\"M18 17V9M13 17V5M8 17v-3\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z\"/>", "camera": "<path d=\"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\"/><circle cx=\"12\" cy=\"13\" r=\"4\"/>", "nav": "<polygon points=\"3 11 22 2 13 21 11 13 3 11\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/>", "alert": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 8v4M12 16h.01\"/>", "user": "<path d=\"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>", "users": "<path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>", "file": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><path d=\"M14 2v6h6M16 13H8M16 17H8\"/>", "link": "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>", "box": "<path d=\"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z\"/><path d=\"M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12\"/>", "map": "<polygon points=\"1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6\"/><path d=\"M8 2v16M16 6v16\"/>", "phone": "<rect x=\"5\" y=\"2\" width=\"14\" height=\"20\" rx=\"2\"/><path d=\"M12 18h.01\"/>", "calendar": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/>", "pen": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z\"/>", "gift": "<path d=\"M20 12v10H4V12M2 7h20v5H2zM12 22V7\"/><path d=\"M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z\"/>", "cash": "<rect x=\"2\" y=\"6\" width=\"20\" height=\"12\" rx=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"M6 12h.01M18 12h.01\"/>", "qr": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\"/><path d=\"M14 14h3v3h-3zM20 14v.01M14 20h.01M17 17h4v4h-4\"/>", "download": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10 5 5 5-5M12 15V3\"/>"};
+const I=(n,cls)=>`<svg class="i ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;
 
 // ===================== storage =====================
 const LS={get(k,d){try{const v=localStorage.getItem('ivx_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('ivx_'+k,JSON.stringify(v))}catch(e){}}};
@@ -497,8 +523,9 @@ function renderDays(){
   $('#days').innerHTML=DAYS.map(D=>{const c=dayStats(D.k);return `<button data-k="${D.k}" class="${D.k===day?'on':''}">${D.d}<small>${c.done}/${c.total}</small><span class="bar" style="width:${(c.done/c.total*100).toFixed(0)}%;background:${HEX[D.k]}"></span></button>`}).join('');
   $('#days').querySelectorAll('button').forEach(b=>b.onclick=()=>{day=b.dataset.k;LS.set('day',day);render();window.scrollTo(0,0)});
 }
-function renderTabBadges(){const t=ymd();const n=dueList().filter(d=>d.due<=t).length;const b=document.querySelector('.tabs button[data-t=due] .ic');if(b)b.innerHTML='🔁'+(n?`<em class="bdg">${n}</em>`:'')}
-const icon=st=>st==='sold'?'✓':st==='no'?'✕':st==='fu'?'↻':'–';
+function renderTabBadges(){const t=ymd();const n=dueList().filter(d=>d.due<=t).length;const b=document.querySelector('.tabs button[data-t=due] .ic');if(b)b.innerHTML=I('repeat')+(n?`<em class="bdg">${n}</em>`:'')}
+const icon=st=>I(st==='sold'?'check':st==='no'?'x':st==='fu'?'refresh':'minus');
+const glyph=st=>st==='sold'?'✓':st==='no'?'✕':st==='fu'?'↻':'–'; // plain text marks for map pins
 const fullAddr=(s,k)=>{const a=(s.addr||'').replace(/\s*\(.*?\)/g,'').trim();const city=(['mon','tue'].includes(k)?'Queens, NY':'New York, NY');if(!a)return s.name+', '+city;
   if(/ny\b|queens|astoria|long island city|new york|brooklyn|bronx/i.test(a))return(s.kind!=='acct'?s.name+', ':'')+a;return(s.kind!=='acct'?s.name+', ':'')+a+', '+city};
 const navLink=(s,k)=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(s.lat&&s.kind==='walk'&&!s.addr?s.lat+','+s.lng:fullAddr(s,k));
@@ -511,11 +538,11 @@ function renderRoute(){
   drawMap();renderGCard();
   const st=stopsFor(day).filter(s=>{const v=statusOf(s);return filter==='all'||(filter==='todo'?!v:!!v)});
   let o=`<div class="empty" style="padding:6px 0 0;text-align:left;font-size:13px"><b style="color:${HEX[day]}">${D.d} ${D.date}</b> · ${esc(D.t)}</div>`;
-  if(!st.length)o+=`<div class="empty">${filter==='todo'?'🎉 Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
+  if(!st.length)o+=`<div class="empty">${filter==='todo'?'Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
   st.forEach(s=>{
     const v=statusOf(s),stg=stageOf(s.storeKey);
     const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+
-      (stg!=='Prospect'?`<span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>`:'')+(scans[s.storeKey]?`<span class="chip c-order">📱 ${scans[s.storeKey]} QR scans</span>`:'');
+      (stg!=='Prospect'?`<span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>`:'')+(scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:'');
     const ph=(s.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);
     const numStyle=v?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:(s.kind==='acct'?`background:${HEX[day]}`:s.kind==='walk'?'background:#4f46e5':'');
     const pics=v&&v.photos&&v.photos.length?`<div class="thumbs">${v.photos.slice(0,4).map(t=>imgTag(t)).join('')}</div>`:'';
@@ -532,9 +559,9 @@ function renderRoute(){
 function resLine(v){
   const b=[];if(v.status==='sold'&&v.cases)b.push(`<b>${v.cases} cs</b>`);if(v.orderTotal)b.push(money(v.orderTotal));if(v.bought)b.push(esc(v.bought));
   if((v.reasons||[]).length)b.push(esc(v.reasons.join(', ')));if((v.alsoDone||[]).length)b.push(esc(v.alsoDone.join(', ')));
-  if(v.freeCans||v.freeCases)b.push(`🎁 ${v.freeCases?v.freeCases+' free cs ':''}${v.freeCans?v.freeCans+' cans':''}`);
-  if(v.paid)b.push(`💵 ${money(v.paid)}`);if(v.signature)b.push('✍️ signed');if(v.followUpDate)b.push(`📅 ${v.status==='sold'?'reorder':'follow up'} ${fmtDate(v.followUpDate)}`);if(v.notes)b.push('“'+esc(v.notes)+'”');
-  const t=v.at?new Date(v.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';const pend=outbox.includes(v.id)?' · ⏳ not uploaded yet':'';
+  if(v.freeCans||v.freeCases)b.push(`${I('gift')} ${v.freeCases?v.freeCases+' free cs ':''}${v.freeCans?v.freeCans+' cans':''}`);
+  if(v.paid)b.push(`${I('cash')} ${money(v.paid)}`);if(v.signature)b.push(I('pen')+' signed');if(v.followUpDate)b.push(`${I('calendar')} ${v.status==='sold'?'reorder':'follow up'} ${fmtDate(v.followUpDate)}`);if(v.notes)b.push('“'+esc(v.notes)+'”');
+  const t=v.at?new Date(v.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';const pend=outbox.includes(v.id)?' · '+I('clock')+' not uploaded yet':'';
   return `<div class="res"><b class="s-${v.status}">${SL[v.status]}</b>${b.length?' — '+b.join(' · '):''}<div style="color:var(--mute);font-size:11.5px;margin-top:2px">${v.by?esc(v.by)+' · ':''}${t}${pend}</div></div>`;
 }
 const fmtDate=d=>{if(!d)return'';const x=new Date(d+'T12:00:00');return x.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})};
@@ -547,12 +574,12 @@ function renderGCard(){
   const todo=stopsFor(day).filter(s=>!statusOf(s));
   let o=`<div class="gcard">`;
   if(todo.length){const next=todo.slice(0,LEG),legs=Math.ceil(todo.length/LEG);
-    o+=`<div class="gt"><h4>🧭 Drive the next ${next.length} stop${next.length>1?'s':''}</h4><span style="font-size:12px;color:var(--mute)">${todo.length} left · ${legs} leg${legs>1?'s':''}</span></div>
+    o+=`<div class="gt"><h4>${I('nav')} Drive the next ${next.length} stop${next.length>1?'s':''}</h4><span style="font-size:12px;color:var(--mute)">${todo.length} left · ${legs} leg${legs>1?'s':''}</span></div>
    <div class="gl">${next.map(s=>`<b>${s.seq}</b> ${esc(s.name)}`).join(' → ')}</div>
    <a class="gbtn" href="${legLink(next)}" target="_blank" rel="noopener">Open in Google Maps</a>
    ${todo.length>LEG?`<a class="gbtn sec2" href="${legLink(todo.slice(LEG,LEG*2))}" target="_blank" rel="noopener">Then: stops ${todo.slice(LEG,LEG*2).map(s=>s.seq).join(', ')}</a>`:''}`}
-  else o+=`<div class="gt"><h4>🎉 Route done for ${DAYS.find(d=>d.k===day).d}</h4></div>`;
-  o+=`<button class="gbtn sec2" id="finder" style="width:100%;box-sizing:border-box;background:#f0fdf4;color:#166534">🔎 Find new stores near me</button></div>`;
+  else o+=`<div class="gt"><h4>${I('check')} Route done for ${DAYS.find(d=>d.k===day).d}</h4></div>`;
+  o+=`<button class="gbtn sec2" id="finder" style="width:100%;box-sizing:border-box;background:#f0fdf4;color:#166534">${I('search')} Find new stores near me</button></div>`;
   $('#gcard').innerHTML=o;$('#finder').onclick=openFinder;
 }
 let gLoad=null,gmap=null,gMarkers=[],gLine=null,gMe=null,gDay=null,geoCache=LS.get('geo',{});
@@ -573,14 +600,14 @@ const HEXS={sold:'#16a34a',no:'#dc2626',fu:'#d97706',skip:'#64748b'};
 async function drawGoogleMap(){
   const box=$('#mapbox');
   if(!box.querySelector('#gmap')){box.innerHTML='<div id="gmap"></div><div class="mapnote" id="gnote">Loading Google Maps…</div>';gmap=null}
-  try{await loadGoogle()}catch(e){box.innerHTML=miniMap(day)+`<div class="mapnote">⚠️ ${esc(e.message)} — showing the sketch map instead. Check the key under Settings.</div>`;gmap=null;return}
+  try{await loadGoogle()}catch(e){box.innerHTML=miniMap(day)+`<div class="mapnote">${I('alert')} ${esc(e.message)} — showing the sketch map instead. Check the key under Settings.</div>`;gmap=null;return}
   if(!gmap){gmap=new google.maps.Map($('#gmap'),{center:{lat:40.75,lng:-73.93},zoom:13,clickableIcons:false,streetViewControl:false,mapTypeControl:false,fullscreenControl:true,gestureHandling:'greedy'});gDay=null}
   const geocoder=new google.maps.Geocoder();const st=stopsFor(day);const pts=[];
   for(const s of st){let ll=s.kind==='walk'&&s.lat?[s.lat,s.lng]:geoCache[fullAddr(s,day)]||null;if(!ll)ll=await geocode(geocoder,fullAddr(s,day));if(!ll&&s.lat)ll=[s.lat,s.lng];pts.push(ll)}
   gMarkers.forEach(m=>m.setMap(null));gMarkers=[];if(gLine)gLine.setMap(null);
   const bounds=new google.maps.LatLngBounds();const path=[];
   st.forEach((s,i)=>{const ll=pts[i];if(!ll)return;const pos={lat:ll[0],lng:ll[1]};path.push(pos);bounds.extend(pos);const v=statusOf(s);
-    const m=new google.maps.Marker({position:pos,map:gmap,title:s.seq+'. '+s.name,zIndex:v?1:10,icon:pin(v?HEXS[v.status]:(s.kind==='walk'?'#4f46e5':HEX[day]),v?icon(v.status):s.seq,!v&&s.kind==='prospect')});
+    const m=new google.maps.Marker({position:pos,map:gmap,title:s.seq+'. '+s.name,zIndex:v?1:10,icon:pin(v?HEXS[v.status]:(s.kind==='walk'?'#4f46e5':HEX[day]),v?glyph(v.status):s.seq,!v&&s.kind==='prospect')});
     m.addListener('click',()=>openStop(s.id));gMarkers.push(m)});
   gLine=new google.maps.Polyline({path,map:gmap,strokeColor:HEX[day],strokeOpacity:.7,strokeWeight:3});
   if(gDay!==day&&path.length){gmap.fitBounds(bounds,30);gDay=day}
@@ -601,7 +628,7 @@ function miniMap(k){
   o+=`<polyline points="${poly([[PLAN[k].start.lat,PLAN[k].start.lng]].concat(st.map(s=>[s.lat,s.lng])))}" fill="none" stroke="${HEX[k]}" stroke-width="2.5" stroke-linejoin="round" opacity=".8"/>`;
   st.forEach((s,i)=>{const [x,y]=pr.f([s.lat,s.lng]);const v=statusOf(s);
     o+=s.kind==='prospect'&&!v?`<rect x="${x-9}" y="${y-9}" width="18" height="18" rx="3" transform="rotate(45 ${x} ${y})" fill="#fff" stroke="var(--pro)" stroke-width="2" stroke-dasharray="3 2"/><text x="${x}" y="${y+4}" font-size="10" font-weight="800" text-anchor="middle" fill="#15803d" font-family="Inter">${i+1}</text>`
-      :`<circle cx="${x}" cy="${y}" r="11" fill="${v?SC[v.status]:HEX[k]}" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y+4}" font-size="${v?12:10.5}" font-weight="800" text-anchor="middle" fill="#fff" font-family="Inter">${v?icon(v.status):i+1}</text>`});
+      :`<circle cx="${x}" cy="${y}" r="11" fill="${v?SC[v.status]:HEX[k]}" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y+4}" font-size="${v?12:10.5}" font-weight="800" text-anchor="middle" fill="#fff" font-family="Inter">${v?glyph(v.status):i+1}</text>`});
   return o+'</svg>';
 }
 
@@ -627,8 +654,8 @@ function openFinder(){
         :'<div class="empty">No new stores within ~700 m. Try the searches below.</div>';
       $('#fres').querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const p=fresh[+b.dataset.add];
         const addr=(p.formattedAddress||'').replace(/, USA$/,'').replace(/, NY \d{5}$/,'');
-        addWalkin(p.displayName,addr,p.nationalPhoneNumber||'',p.location.lat(),p.location.lng());b.textContent='Added ✓';b.disabled=true});
-    }catch(e){$('#fres').innerHTML=`<div class="note" style="margin-top:12px">⚠️ Nearby search didn't work (${esc(e.message||e)}). Make sure “Places API (New)” is enabled for your key. The searches below still work.</div>`}
+        addWalkin(p.displayName,addr,p.nationalPhoneNumber||'',p.location.lat(),p.location.lng());b.textContent='Added';b.disabled=true});
+    }catch(e){$('#fres').innerHTML=`<div class="note" style="margin-top:12px">${I('alert')} Nearby search didn't work (${esc(e.message||e)}). Make sure “Places API (New)” is enabled for your key. The searches below still work.</div>`}
   },()=>{$('#fres').innerHTML='<div class="note" style="margin-top:12px">Location is off — allow it for this site, or use the searches below.</div>'});
 }
 function addWalkin(name,addr,phone,lat,lng){
@@ -662,9 +689,9 @@ function drawSheet(){
   if(!draft._fuTouched)draft.followUpDate=defaultFollow();
   const hasP=P().length>0,saleish=draft.status==='sold'||draft.status==='fu',why=draft.status==='no'||draft.status==='fu'||draft.status==='skip';
   let o=`<div class="grab"></div><h2>${esc(s.name)}</h2><div class="sub">${esc(s.addr)}${s.contact?' · '+esc(s.contact):''}</div>
-   <div class="chips" style="margin-top:6px"><span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>${scans[s.storeKey]?`<span class="chip c-order">📱 ${scans[s.storeKey]} QR scans</span>`:''}</div>`;
-  if(tl.length){o+=`<details class="hist" ${tl.length?'open':''}><summary>History · ${tl.length} earlier visit${tl.length>1?'s':''}</summary>${tl.slice(0,6).map(e=>`<div class="hrow"><b class="s-${e.status}">${SL[e.status]}</b> · ${new Date(e.at).toLocaleDateString([],{month:'short',day:'numeric'})}${e.by?' · '+esc(e.by):''}${e.cases?` · ${e.cases} cs`:''}${e.bought?`<div class="m">${esc(e.bought)}</div>`:''}${(e.reasons||[]).length?`<div class="m">${esc(e.reasons.join(', '))}</div>`:''}${e.contactName?`<div class="m">👤 ${esc(e.contactName)} ${esc(e.contactPhone||'')}</div>`:''}${e.notes?`<div class="m">“${esc(e.notes)}”</div>`:''}</div>`).join('')}</details>`}
-  o+=`<div class="lab">Outcome</div><div class="outs">${['sold','no','fu','skip'].map(k=>`<button data-s="${k}" class="${draft.status===k?'on':''}">${k==='sold'?'✓ Sold':k==='no'?'✕ No sale':k==='fu'?'↻ Follow up':'– Closed / skip'}</button>`).join('')}</div>`;
+   <div class="chips" style="margin-top:6px"><span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>${scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:''}</div>`;
+  if(tl.length){o+=`<details class="hist" ${tl.length?'open':''}><summary>History · ${tl.length} earlier visit${tl.length>1?'s':''}</summary>${tl.slice(0,6).map(e=>`<div class="hrow"><b class="s-${e.status}">${SL[e.status]}</b> · ${new Date(e.at).toLocaleDateString([],{month:'short',day:'numeric'})}${e.by?' · '+esc(e.by):''}${e.cases?` · ${e.cases} cs`:''}${e.bought?`<div class="m">${esc(e.bought)}</div>`:''}${(e.reasons||[]).length?`<div class="m">${esc(e.reasons.join(', '))}</div>`:''}${e.contactName?`<div class="m">${I('user')} ${esc(e.contactName)} ${esc(e.contactPhone||'')}</div>`:''}${e.notes?`<div class="m">“${esc(e.notes)}”</div>`:''}</div>`).join('')}</details>`}
+  o+=`<div class="lab">Outcome</div><div class="outs">${['sold','no','fu','skip'].map(k=>`<button data-s="${k}" class="${draft.status===k?'on':''}">${k==='sold'?I('check')+' Sold':k==='no'?I('x')+' No sale':k==='fu'?I('refresh')+' Follow up':I('minus')+' Closed / skip'}</button>`).join('')}</div>`;
   if(saleish){
     if(hasP){o+=`<div class="lab">Order ${draft.status==='fu'?'(if any)':''}</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b><div class="m">${p.casePrice?money(p.casePrice)+'/cs':''}${p.unitsPerCase?' · '+p.unitsPerCase+'/cs':''}</div></div><div class="step sm"><button data-dq="${esc(p.id)}" data-d="-1">−</button><span class="qv">${qtyOf(p.id)}</span><button data-dq="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
       <div class="otot"><span>${orderCases()} cases</span><b>${money(orderTotal())}</b></div></div>`}
@@ -674,16 +701,16 @@ function drawSheet(){
   }
   if(why){o+=`<div class="lab">Why</div><div class="qc" id="qr">${NO_CHIPS.map(c=>`<button class="${draft.reasons.includes(c)?'on':''}">${esc(c)}</button>`).join('')}</div>`;
     const cb=draft.reasons.map(r=>[r,(config.pitch&&config.pitch.objections||{})[r]]).filter(x=>x[1]);
-    if(cb.length)o+=cb.map(([r,t])=>`<div class="comeback"><b>💬 ${esc(r)}</b><div>${esc(fillTokens(t))}</div></div>`).join('')}
+    if(cb.length)o+=cb.map(([r,t])=>`<div class="comeback"><b>${I('message')} ${esc(r)}</b><div>${esc(fillTokens(t))}</div></div>`).join('')}
   if(draft.status){
-    o+=`<div class="lab">Shelf photos</div><div class="thumbs edit">${draft.photos.map((t,i)=>`<span class="tw">${imgTag(t)}<button class="tx" data-rp="${i}">✕</button></span>`).join('')}<label class="addph">📷<input id="ph" type="file" accept="image/*" capture="environment" multiple hidden></label></div>`;
+    o+=`<div class="lab">Shelf photos</div><div class="thumbs edit">${draft.photos.map((t,i)=>`<span class="tw">${imgTag(t)}<button class="tx" data-rp="${i}">${I('x')}</button></span>`).join('')}<label class="addph">${I('camera')}<input id="ph" type="file" accept="image/*" capture="environment" multiple hidden></label></div>`;
     o+=`<div class="lab">Samples & freebies</div><div class="row2"><div><div class="m">Free cans</div><div class="step sm"><button data-f="freeCans" data-d="-1">−</button><span class="qv">${draft.freeCans}</span><button data-f="freeCans" data-d="1">+</button></div></div>
       <div><div class="m">Free cases</div><div class="step sm"><button data-f="freeCases" data-d="-1">−</button><span class="qv">${draft.freeCases}</span><button data-f="freeCases" data-d="1">+</button></div></div></div>
       <div class="row2" style="margin-top:8px"><input id="disc" type="number" inputmode="decimal" placeholder="Discount $" value="${esc(draft.discount)}"><div class="m" style="align-self:center">Cost: <b>${money(sampleCost())}</b>${!P().length&&(draft.freeCans||draft.freeCases)?' (add prices in Settings)':''}</div></div>`;
     o+=`<div class="lab">${draft.status==='sold'?'Reorder check':'Follow-up'} date</div><div class="row2"><input id="fud" type="date" value="${esc(draft.followUpDate)}"><button class="btn2" id="fuclr">${draft.followUpDate?'No follow-up':'Set default'}</button></div>`;
     o+=`<div class="lab">Money collected ($)</div><input id="paid" type="number" inputmode="decimal" placeholder="0" value="${esc(draft.paid)}">
     <div class="lab">Decision maker</div><div class="row2"><input id="cn" type="text" placeholder="Name" value="${esc(draft.contactName)}"><input id="cp" type="tel" placeholder="Cell" value="${esc(draft.contactPhone)}"></div>`;
-    if(saleish)o+=`<div class="lab">Signature ${draft.status==='fu'?'(optional)':'(drop-off / consignment)'}</div>${draft.signature?`<div class="sigshow">${imgTag(draft.signature,'sigimg')}<div class="m">Signed by ${esc(draft.signer||'—')}</div><button class="btn2" id="sigclr">Clear signature</button></div>`:`<button class="btn2" id="sigbtn" style="width:100%;box-sizing:border-box">✍️ Get signature</button>`}`;
+    if(saleish)o+=`<div class="lab">Signature ${draft.status==='fu'?'(optional)':'(drop-off / consignment)'}</div>${draft.signature?`<div class="sigshow">${imgTag(draft.signature,'sigimg')}<div class="m">Signed by ${esc(draft.signer||'—')}</div><button class="btn2" id="sigclr">Clear signature</button></div>`:`<button class="btn2" id="sigbtn" style="width:100%;box-sizing:border-box">${I('pen')} Get signature</button>`}`;
     o+=`<div class="lab">Notes</div><textarea id="notes" placeholder="Anything to remember for next visit">${esc(draft.notes)}</textarea>`;
   }
   o+=`<button class="save" id="save" ${draft.status?'':'disabled'}>Save check-in</button>`;
@@ -737,7 +764,7 @@ function openSigPad(store,defName,done){
 }
 $('#addwalk').onclick=()=>{
   cur=null;const sh=$('#sheet');
-  sh.innerHTML=`<div class="grab"></div><h2>Add a walk-in store</h2><div class="sub">Adds it to ${DAYS.find(d=>d.k===day).d}'s list for everyone. Or use 🔎 Find new stores to pick from nearby.</div>
+  sh.innerHTML=`<div class="grab"></div><h2>Add a walk-in store</h2><div class="sub">Adds it to ${DAYS.find(d=>d.k===day).d}'s list for everyone. Or use Find new stores to pick from nearby.</div>
   <div class="lab">Store name</div><input id="wn" type="text" placeholder="e.g. Sunrise Deli">
   <div class="lab">Address</div><input id="wa" type="text" placeholder="e.g. 45-12 Broadway">
   <div class="lab">Phone (optional)</div><input id="wp" type="tel" placeholder="e.g. 718-555-0100">
@@ -758,15 +785,15 @@ function renderDue(){
    <div class="ctrl" style="padding:12px 0 2px"><div class="seg" id="dsort"><button data-s="date" class="${dueSort==='date'?'on':''}">By date</button><button data-s="near" class="${dueSort==='near'?'on':''}">Nearest to me</button></div></div>`;
   const now=items.filter(x=>x.due<=wk);
   if(now.length){const legs=now.slice(0,LEG).map(x=>({...x,kind:x.kind||'acct'}));
-    o+=`<div class="gcard" style="margin:8px 0"><div class="gt"><h4>🧭 Drive the first ${legs.length}</h4><span style="font-size:12px;color:var(--mute)">${now.length} due this week</span></div><div class="gl">${legs.map(x=>esc(x.name)).join(' → ')}</div><a class="gbtn" href="${legLink(legs)}" target="_blank" rel="noopener">Open in Google Maps</a></div>`}
+    o+=`<div class="gcard" style="margin:8px 0"><div class="gt"><h4>${I('nav')} Drive the first ${legs.length}</h4><span style="font-size:12px;color:var(--mute)">${now.length} due this week</span></div><div class="gl">${legs.map(x=>esc(x.name)).join(' → ')}</div><a class="gbtn" href="${legLink(legs)}" target="_blank" rel="noopener">Open in Google Maps</a></div>`}
   if(!items.length)o+=`<div class="empty">No follow-ups yet. When you mark a store “Follow up” or “Sold,” it lands here on its follow-up or reorder date.</div>`;
   groups.forEach(([g,f])=>{const arr=items.filter(f);if(!arr.length)return;
     o+=`<div class="lab" style="margin:16px 0 4px;color:${g==='Overdue'?'var(--no)':g==='Today'?'var(--fu)':'#777'}">${g} (${arr.length})</div>`;
     arr.forEach((d,i)=>{const ph=(d.phone||'').match(/\d{3}-?\d{3}-?\d{4}/);const L=d.last;
-      o+=`<div class="st" data-k="${esc(d.storeKey)}"><div class="num" style="background:${STAGE_COL[d.stage]}">${d.why==='Reorder check'?'↺':'↻'}</div><div><h3>${esc(d.name)}</h3>
+      o+=`<div class="st" data-k="${esc(d.storeKey)}"><div class="num" style="background:${STAGE_COL[d.stage]}">${d.why==='Reorder check'?I('repeat'):I('refresh')}</div><div><h3>${esc(d.name)}</h3>
        <div class="addr">${esc(d.addr||'')}${d.phone?' · '+esc(d.phone):''}</div>
        <div class="chips"><span class="chip" style="background:${STAGE_COL[d.stage]}1f;color:${STAGE_COL[d.stage]}">${d.stage.toUpperCase()}</span><span class="chip c-check">${esc(d.why)} · ${fmtDate(d.due)}</span>${here&&d.lat?`<span class="chip c-check">${(dist(d)*0.621).toFixed(1)} mi</span>`:''}</div>
-       <div class="res" style="border-top:0;padding-top:4px;margin-top:4px">Last: <b class="s-${L.status}">${SL[L.status]}</b> ${new Date(L.at).toLocaleDateString([],{month:'short',day:'numeric'})}${L.cases?` · ${L.cases} cs`:''}${L.bought?' · '+esc(L.bought):''}${(L.reasons||[]).length?' · '+esc(L.reasons.join(', ')):''}${L.contactName?`<div class="m">👤 ${esc(L.contactName)} ${esc(L.contactPhone||'')}</div>`:''}${L.notes?`<div class="m">“${esc(L.notes)}”</div>`:''}</div>
+       <div class="res" style="border-top:0;padding-top:4px;margin-top:4px">Last: <b class="s-${L.status}">${SL[L.status]}</b> ${new Date(L.at).toLocaleDateString([],{month:'short',day:'numeric'})}${L.cases?` · ${L.cases} cs`:''}${L.bought?' · '+esc(L.bought):''}${(L.reasons||[]).length?' · '+esc(L.reasons.join(', ')):''}${L.contactName?`<div class="m">${I('user')} ${esc(L.contactName)} ${esc(L.contactPhone||'')}</div>`:''}${L.notes?`<div class="m">“${esc(L.notes)}”</div>`:''}</div>
        <div class="acts"><a href="${navLink({...d,kind:d.kind||'acct'},d.day)}" target="_blank" rel="noopener" data-stop>Navigate</a>${ph?`<a href="tel:${ph[0].replace(/-/g,'')}" data-stop>Call</a>`:''}${L.contactPhone?`<a href="sms:${String(L.contactPhone).replace(/[^\d+]/g,'')}" data-stop>Text</a>`:''}<a href="#" data-open>Check in</a></div></div></div>`});
   });
   o+='</div>';$('#v-due').innerHTML=o;
@@ -781,7 +808,7 @@ function renderPitch(){
   const p=config.pitch||{},prods=P();
   let o=`<div class="sum">`;
   o+=`<div class="sec" style="margin-top:0"><h4>Price sheet</h4>${prods.length?`<table class="ptab"><tr><th>Flavor</th><th>Case</th><th>Per can</th><th>Shelf</th><th>Store makes</th></tr>${prods.map(x=>{const m=marginOf(x),u=unitCost(x);return`<tr><td><b>${esc(x.name)}</b>${x.unitsPerCase?`<div class="m">${x.unitsPerCase}/case</div>`:''}</td><td>${x.casePrice?money(x.casePrice):'—'}</td><td>${u!=null?money(u):'—'}</td><td>${x.srp?money(x.srp):'—'}</td><td>${m?`<b style="color:var(--sold)">${money(m.per)}</b><div class="m">${Math.round(m.pct*100)}%</div>`:'—'}</td></tr>`}).join('')}</table>`:`<div class="it">No flavors yet — add them in <b>Settings → Products</b> to fill this in and turn on the tap-to-order form.</div>`}</div>`;
-  if(p.sellSheetUrl)o+=`<a class="gbtn" style="margin-top:12px" href="${esc(p.sellSheetUrl)}" target="_blank" rel="noopener">📄 Open sell sheet</a>`;
+  if(p.sellSheetUrl)o+=`<a class="gbtn" style="margin-top:12px" href="${esc(p.sellSheetUrl)}" target="_blank" rel="noopener">${I('file')} Open sell sheet</a>`;
   o+=`<div class="sec"><h4>Talking points</h4>${(p.points||[]).map(t=>`<div class="it">• ${esc(fillTokens(t))}</div>`).join('')||'<div class="it">Add talking points in Settings → Pitch kit.</div>'}</div>`;
   o+=`<div class="sec"><h4>When they say…</h4>${Object.entries(p.objections||{}).filter(x=>x[1]).map(([r,t])=>`<div class="it"><b>${esc(r)}</b><div class="m" style="font-size:13px;color:#333">${esc(fillTokens(t))}</div></div>`).join('')}</div>`;
   const qr=S().qrUrl;
@@ -816,7 +843,7 @@ function renderSum(){
   if(rs.length)o+=`<div class="sec"><h4>Top objections</h4>${rs.map(([r,n])=>`<div class="it">${esc(r)} <b style="float:right">${n}</b></div>`).join('')}</div>`;
   o+=sec('Closed / skipped','var(--skip)',rows.skip,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${v.notes?' — '+esc(v.notes):''}</div>`);
   if(!done)o+=`<div class="empty">No check-ins yet${scope==='day'?' for '+D.d:''}. Results fill in as you check stores off.</div>`;
-  o+=`<button class="save" id="copyr">Copy ${scope==='day'?D.d+"'s":"the week's"} report</button><a class="gbtn" style="background:#111;margin-top:10px" href="dashboard.html" target="_blank" rel="noopener">📊 Open manager dashboard</a>`;
+  o+=`<button class="save" id="copyr">Copy ${scope==='day'?D.d+"'s":"the week's"} report</button><a class="gbtn" style="background:#111;margin-top:10px" href="dashboard.html" target="_blank" rel="noopener">${I('chart')} Open manager dashboard</a>`;
   $('#sum').innerHTML=o;
   $('#sum').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{scope=b.dataset.sc;renderSum()});
   $('#copyr').onclick=()=>{const L=[`IV-X NYC route report — ${scope==='day'?D.d+' '+D.date+' · '+D.t:'Week of 11/9'}`,`Visited ${done}/${t.total} · Sold ${t.sold} · ${t.cases} cases${t.orders?' · '+money(t.orders)+' in orders':''} · Follow-ups ${t.fu} · No sale ${t.no} · Collected ${money(t.paid)}${t.cost?' · Samples '+money(t.cost):''}`,''];
@@ -832,29 +859,29 @@ function renderSet(){
   const appLink=location.origin+location.pathname;
   const box=(id,title,body)=>`<details class="setbox" data-id="${id}" ${setOpen[id]!==false&&(setOpen[id]||['me','sync'].includes(id))?'open':''}><summary><h3>${title}</h3></summary>${body}</details>`;
   const pr=P(),pi=config.pitch||{},st=S();
-  let o=box('me','👤 Your name',`<p>Shows next to every check-in you make.</p><input id="nm" type="text" placeholder="e.g. Nando" value="${esc(myName())}">`);
-  o+=box('sync','🔗 Account & sync',sb?`<p>${session?`Signed in as <b>${esc(session.user.email)}</b>. Check-ins sync live with everyone on the team.`:'You\'re signed out — check-ins stay on this phone until you sign in.'}</p>
-   <div class="msg">${session?(lastOk?'✅ Last synced '+new Date(lastOk).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+(rtLive?' · live updates on':''):(lastErr?'⚠️ '+esc(lastErr):'Not synced yet')):''}${outbox.length?' · '+outbox.length+' waiting to upload':''}</div>
+  let o=box('me',I('user')+'Your name',`<p>Shows next to every check-in you make.</p><input id="nm" type="text" placeholder="e.g. Nando" value="${esc(myName())}">`);
+  o+=box('sync',I('link')+'Account & sync',sb?`<p>${session?`Signed in as <b>${esc(session.user.email)}</b>. Check-ins sync live with everyone on the team.`:'You\'re signed out — check-ins stay on this phone until you sign in.'}</p>
+   <div class="msg">${session?(lastOk?'Last synced '+new Date(lastOk).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+(rtLive?' · live updates on':''):(lastErr?I('alert')+' '+esc(lastErr):'Not synced yet')):''}${outbox.length?' · '+outbox.length+' waiting to upload':''}</div>
    <div class="btnrow">${session?'<button class="btn2" id="snow">Sync now</button><button class="btn2" id="sout">Sign out</button>':'<button class="btn2 dark" id="sin">Sign in</button>'}</div>`
    :`<p>Cloud sync isn't set up in this copy of the app yet. Add your Supabase Project URL and publishable key to <b>config.js</b> and upload the folder again (see the setup guide). Until then, check-ins are saved on this phone only.</p>`);
-  if(sb)o+=box('invite','📨 Add your team',`<p><b>1.</b> In Supabase, go to <b>Authentication → Users → Add user → Create new user</b>. Enter their email and a password, and tick <b>Auto Confirm User</b>.<br><b>2.</b> Text them this link with their email and password.</p><input type="text" readonly value="${esc(appLink)}" onclick="this.select()"><div class="btnrow"><button class="btn2 dark" id="lcopy">Copy app link</button></div>`);
-  o+=box('prod','🥤 Products & prices',`<p>Your flavors. Powers the tap-to-order form, order totals, store margin and sample cost. Saved for the whole team.</p>
+  if(sb)o+=box('invite',I('users')+'Add your team',`<p><b>1.</b> In Supabase, go to <b>Authentication → Users → Add user → Create new user</b>. Enter their email and a password, and tick <b>Auto Confirm User</b>.<br><b>2.</b> Text them this link with their email and password.</p><input type="text" readonly value="${esc(appLink)}" onclick="this.select()"><div class="btnrow"><button class="btn2 dark" id="lcopy">Copy app link</button></div>`);
+  o+=box('prod',I('box')+'Products & prices',`<p>Your flavors. Powers the tap-to-order form, order totals, store margin and sample cost. Saved for the whole team.</p>
    <div id="plist">${pr.map((x,i)=>`<div class="prow"><input data-pi="${i}" data-k="name" type="text" placeholder="Flavor" value="${esc(x.name)}"><div class="row3"><label>Case $<input data-pi="${i}" data-k="casePrice" type="number" inputmode="decimal" value="${esc(x.casePrice??'')}"></label><label>Cans/case<input data-pi="${i}" data-k="unitsPerCase" type="number" inputmode="numeric" value="${esc(x.unitsPerCase??'')}"></label><label>Shelf $<input data-pi="${i}" data-k="srp" type="number" inputmode="decimal" value="${esc(x.srp??'')}"></label></div><button class="tx2" data-del="${i}">Remove</button></div>`).join('')}</div>
    <div class="btnrow"><button class="btn2" id="padd">+ Add flavor</button><button class="btn2 dark" id="psave">Save products</button></div>`);
-  o+=box('pitch','💬 Pitch kit',`<p>Shows on the Pitch tab and pops up when you tap a no-sale reason. Use {margin}, {unitCost} and {srp} to fill in numbers from your price list. Edit the [bracketed] parts before you go out.</p>
+  o+=box('pitch',I('message')+'Pitch kit',`<p>Shows on the Pitch tab and pops up when you tap a no-sale reason. Use {margin}, {unitCost} and {srp} to fill in numbers from your price list. Edit the [bracketed] parts before you go out.</p>
    <div class="lab">Sell sheet link (PDF, Drive, Canva…)</div><input id="ssu" type="text" placeholder="https://…" value="${esc(pi.sellSheetUrl||'')}">
    <div class="lab">Talking points (one per line)</div><textarea id="pts" rows="7">${esc((pi.points||[]).join('\n'))}</textarea>
    ${NO_CHIPS.map(r=>`<div class="lab">When they say “${esc(r)}”</div><textarea data-obj="${esc(r)}" rows="2">${esc((pi.objections||{})[r]||'')}</textarea>`).join('')}
    <div class="btnrow"><button class="btn2 dark" id="pisave">Save pitch kit</button></div>`);
-  o+=box('qr','📱 QR shelf tags',`<p>Each store gets its own QR tag to stick on the shelf or cooler. Scans are counted per store and send shoppers to this link. Print them from the <a href="dashboard.html#qr" target="_blank">dashboard</a>.</p>
+  o+=box('qr',I('qr')+'QR shelf tags',`<p>Each store gets its own QR tag to stick on the shelf or cooler. Scans are counted per store and send shoppers to this link. Print them from the <a href="dashboard.html#qr" target="_blank">dashboard</a>.</p>
    <input id="qru" type="text" placeholder="https://www.tiktok.com/@yourbrand" value="${esc(st.qrUrl||'')}"><div class="btnrow"><button class="btn2 dark" id="qrsave">Save link</button></div>
 `);
-  o+=box('fu','📅 Follow-up timing',`<div class="row2"><label class="m">Reorder check after (days)<input id="rd" type="number" value="${esc(st.reorderDays)}"></label><label class="m">Follow up after (days)<input id="fd" type="number" value="${esc(st.followUpDays)}"></label></div>
+  o+=box('fu',I('calendar')+'Follow-up timing',`<div class="row2"><label class="m">Reorder check after (days)<input id="rd" type="number" value="${esc(st.reorderDays)}"></label><label class="m">Follow up after (days)<input id="fd" type="number" value="${esc(st.followUpDays)}"></label></div>
    <div class="btnrow"><button class="btn2 dark" id="fusave">Save</button></div>`);
-  o+=box('map','🗺️ Live Google Map',`<p>Paste a Google Maps API key for the live map and the 🔎 store finder. Without one, the “Open in Google Maps” buttons still work.</p>
+  o+=box('map',I('map')+'Live Google Map',`<p>Paste a Google Maps API key for the live map and the store finder. Without one, the “Open in Google Maps” buttons still work.</p>
    <input id="mk" type="text" placeholder="AIza…" value="${esc(LS.get('mapsKey','')||CFG.MAPS_KEY||'')}"><div class="btnrow"><button class="btn2 dark" id="mksave">Save key</button></div>`);
-  o+=box('inst','📲 Install on your phone',`<p><b>iPhone:</b> open in Safari → Share → <i>Add to Home Screen</i>.<br><b>Android:</b> Chrome ⋮ → <i>Install app</i>.<br>Works without signal; check-ins and photos upload when you're back online.</p>${deferredPrompt?'<div class="btnrow"><button class="btn2 dark" id="inst">Install now</button></div>':''}`);
-  o+=box('phone','📱 This phone',`<p>${Object.values(recs).filter(r=>r.status&&!r.deleted).length} check-ins stored here · ${outbox.length} waiting to upload.</p><div class="btnrow"><a class="btn2" href="dashboard.html" target="_blank">Manager dashboard</a><button class="btn2" id="reset">Reset this phone</button></div>`);
+  o+=box('inst',I('phone')+'Install on your phone',`<p><b>iPhone:</b> open in Safari → Share → <i>Add to Home Screen</i>.<br><b>Android:</b> Chrome ⋮ → <i>Install app</i>.<br>Works without signal; check-ins and photos upload when you're back online.</p>${deferredPrompt?'<div class="btnrow"><button class="btn2 dark" id="inst">Install now</button></div>':''}`);
+  o+=box('phone',I('phone')+'This phone',`<p>${Object.values(recs).filter(r=>r.status&&!r.deleted).length} check-ins stored here · ${outbox.length} waiting to upload.</p><div class="btnrow"><button class="btn2" id="wtour">Show welcome tour</button></div><div class="btnrow"><a class="btn2" href="dashboard.html" target="_blank">Manager dashboard</a><button class="btn2" id="reset">Reset this phone</button></div>`);
   $('#v-set').innerHTML=o;
   document.querySelectorAll('#v-set details').forEach(d=>d.ontoggle=()=>{setOpen[d.dataset.id]=d.open;LS.set('setOpen',setOpen)});
   const g=id=>document.getElementById(id);
@@ -873,8 +900,32 @@ function renderSet(){
   g('fusave').onclick=()=>{config.settings=Object.assign({},config.settings,{reorderDays:+g('rd').value||14,followUpDays:+g('fd').value||3,});saveConfig()};
   g('mksave').onclick=()=>{const v=g('mk').value.trim();if(v&&!/^AIza[\w-]{20,}$/.test(v)){toast('That doesn\'t look like a Google API key');return}LS.set('mapsKey',v);toast(v?'Key saved — reopen the app to load the map':'Key removed');renderSet()};
   if(g('inst'))g('inst').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;renderSet()};
+  if(g('wtour'))g('wtour').onclick=()=>{wStep=0;showWelcome()};
   g('reset').onclick=()=>{if(outbox.length&&!confirmReset){confirmReset=true;g('reset').textContent=`Tap again — ${outbox.length} not uploaded will be lost`;return}
     recs={};outbox=[];serverLog=[];LS.set('log',[]);persist();confirmReset=false;toast('Phone reset');syncNow(true);renderSet()};
+}
+
+
+// ===================== welcome tour =====================
+const WELCOME=[
+  {i:'box',t:'Welcome to IV-X Field',b:'Your tool for getting IV-X on shelves across NYC. Every store on the route, every visit and every sale lives here, shared live with the whole team.'},
+  {i:'pin',t:'Follow your route',b:'Pick the day at the top. Stores are listed in driving order. Tap <b>Open in Google Maps</b> to get directions through your next four stops, or <b>Navigate</b> and <b>Call</b> on any store.'},
+  {i:'check',t:'Check in at every store',b:'Tap a store and choose <b>Sold</b>, <b>No sale</b>, <b>Follow up</b> or <b>Closed</b>. Add the order by flavor, shelf photos, samples left, the owner\'s contact and a signature if needed.'},
+  {i:'repeat',t:'Never miss a follow-up',b:'<b>Follow-ups</b> lists every store due for a revisit or reorder check. <b>Pitch</b> has prices, store margins and answers to common objections.'},
+  {i:'chart',t:'Works anywhere',b:'No signal? Keep going. Check-ins save on your phone and upload automatically. See totals on <b>Results</b>, and add the app to your home screen for one-tap access.'}];
+let wStep=0;
+function showWelcome(){
+  let el=$('#welcome');if(!el){el=document.createElement('div');el.id='welcome';document.body.appendChild(el)}
+  const s=WELCOME[wStep],last=wStep===WELCOME.length-1;
+  el.className='welcome on';
+  el.innerHTML=`<div class="wbox"><button class="wskip" id="wskip">${last?'':'Skip'}</button>
+   <div class="wicon">${I(s.i)}</div><div class="wstep">${wStep+1} of ${WELCOME.length}</div><h2>${s.t}</h2><p>${s.b}</p>
+   <div class="wdots">${WELCOME.map((_,i)=>`<span class="${i===wStep?'on':''}"></span>`).join('')}</div>
+   <div class="wbtns">${wStep?'<button class="wback" id="wback">Back</button>':''}<button class="wnext" id="wnext">${last?'Get started':'Next'}</button></div></div>`;
+  const done=()=>{LS.set('welcomed',true);el.classList.remove('on');wStep=0};
+  $('#wnext').onclick=()=>{if(last)done();else{wStep++;showWelcome()}};
+  if($('#wback'))$('#wback').onclick=()=>{wStep--;showWelcome()};
+  $('#wskip').onclick=done;
 }
 
 // ===================== misc =====================
@@ -889,9 +940,9 @@ $('#gear').onclick=()=>switchTab('set');
 $('#seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{filter=b.dataset.f;$('#seg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));renderRoute()});
 $('#mapt').onclick=()=>{mapOn=!mapOn;$('#mapbox').classList.toggle('on',mapOn);$('#mapt').textContent=mapOn?'Hide map':'Map';renderRoute()};
 let deferredPrompt=null;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=$('#install');b.innerHTML='📲 Put IV-X Field on your home screen — <b id="ib">Install</b>';b.classList.add('on');$('#ib').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;b.classList.remove('on')}});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=$('#install');b.innerHTML=I('download')+' Add IV-X Field to your home screen — <b id="ib">Install</b>';b.classList.add('on');$('#ib').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;b.classList.remove('on')}});
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
-render();boot();
+render();boot();if(!LS.get('welcomed',false))showWelcome();
 
 </script>
 </body>
