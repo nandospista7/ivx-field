@@ -98,7 +98,7 @@ function setup(err,hard){
   $('#go').onclick=go;$('#sp').onkeydown=e=>{if(e.key==='Enter')go()};
 }
 // latest save per record id
-function latestById(log){const m={};log.forEach(e=>{if(!m[e.id]||String(m[e.id].at)<String(e.at))m[e.id]=e});return Object.values(m).filter(e=>!e.deleted&&e.status)}
+function latestById(log){const m={};log.forEach(e=>{if(e.kind==='payment')return;if(!m[e.id]||String(m[e.id].at)<String(e.at))m[e.id]=e});return Object.values(m).filter(e=>!e.deleted&&e.status)}
 function inRange(e,rng){if(rng==='all')return true;const d=ymd(new Date(e.at));if(rng==='today')return d===ymd();if(rng==='week')return d>='2026-11-09'&&d<='2026-11-15'||e.day&&DAYS.some(x=>x.k===e.day)&&d<='2026-11-15';return e.day===rng}
 function stageOf(tl){if(!tl.length)return'Prospect';const sold=tl.filter(e=>e.status==='sold').length;if(sold>=3)return'Regular';if(sold===2)return'Reorder';if(sold===1)return'First order';
   if(tl[0].status==='no'&&tl[0].reasons.includes('Not interested'))return'Lost';if(tl.some(e=>e.freeCans||e.freeCases||e.alsoDone.includes('Samples left')))return'Sampled';return'Pitched'}
@@ -118,6 +118,20 @@ function dayChart(byDay){ // stacked outcome bars per day + close-rate labels
     const tot=keys.reduce((t,k)=>t+d[k],0);o+=`<text x="${x+bw/2}" y="${y-6}" text-anchor="middle" font-size="11.5" font-weight="700">${tot?Math.round(d.sold/tot*100)+'%':''}</text><text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="12" font-weight="700" fill="${HEX[d.k]}">${d.label}</text>`});
   return o+'</svg><div class="sub" style="margin-top:4px">■ <span class="s-sold">sold</span> ■ <span class="s-fu">follow up</span> ■ <span class="s-no">no sale</span> ■ <span style="color:#94a3b8">closed</span> · % = close rate</div>'}
 
+
+// ---- money owed & sell-through (mirrors the app's logic)
+function owedList(){const rows=data.rows.filter(r=>!r.deleted);const pays=rows.filter(r=>r.kind==='payment');
+  return rows.filter(r=>r.status==='sold'&&r.invoiceNo&&(parseFloat(r.orderTotal)||0)>0).map(r=>{const tot=parseFloat(r.orderTotal)||0;
+    const paid=(parseFloat(r.paid)||0)+pays.filter(x=>x.invoiceNo===r.invoiceNo).reduce((t,x)=>t+(parseFloat(x.amount)||0),0);return{r,tot,paid,bal:Math.round((tot-paid)*100)/100}}).filter(x=>x.bal>0.004)}
+function sellThroughAll(){const prods=(data.config.products||[]);const upc=id=>{const p=prods.find(x=>x.id===id);return p&&+p.unitsPerCase?+p.unitsPerCase:1};
+  const by={};latestById(data.log.length?data.log:data.rows).forEach(e=>{(by[e.storeKey]=by[e.storeKey]||[]).push(e)});
+  const out=[];Object.entries(by).forEach(([k,ev])=>{ev.sort((a,b)=>String(a.at).localeCompare(String(b.at)));let stock=null,lastAt=null,sold=0,days=0,lastShelf=null;
+    ev.forEach(e=>{const t=new Date(e.at).getTime();const sh=e.shelf&&Object.keys(e.shelf).length?e.shelf:null;
+      if(sh&&stock){const d=(t-lastAt)/864e5;if(d>0.5){Object.keys(stock).forEach(pid=>sold+=Math.max(0,(stock[pid]||0)-(+sh[pid]||0)));days+=d}}
+      const next=sh?Object.fromEntries(Object.entries(sh).map(([a,b])=>[a,+b||0])):{...(stock||{})};(e.items||[]).forEach(i=>next[i.id]=(next[i.id]||0)+(+i.q||0)*upc(i.id));
+      if((e.items||[]).length||sh){stock=next;lastAt=t}if(sh)lastShelf={at:e.at,n:Object.values(sh).reduce((a,b)=>a+(+b||0),0)}});
+    if(days>=0.5)out.push({k,name:(DIR[k]||{}).name||ev[0].store,perWeek:sold/days*7,days:Math.round(days),lastShelf})});
+  return out.sort((a,b)=>b.perWeek-a.perWeek)}
 function render(){
   const rng=$('#rng').value,rep=$('#rep').value;
   const all=latestById(data.log.length?data.log:data.rows);
@@ -142,6 +156,9 @@ function render(){
    <div class="card"><h2>Pipeline</h2><div class="sub">Every store on the routes and walk-ins, by stage</div>${hbars(STAGES.map(s=>[s,pipe[s],STAGE_COL[s]]))}</div>
    <div class="card"><h2>Flavors sold</h2><div class="sub">Cases ordered through the order form</div>${hbars(Object.entries(flav).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v]),{fmt:v=>v+' cs'})}</div>
    <div class="card"><h2>Top objections</h2><div class="sub">Reasons tapped on no-sale / follow-up visits</div>${hbars(Object.entries(reasons).sort((a,b)=>b[1]-a[1]).map(([k,v])=>[k,v,'#dc2626']))}</div>
+   <div class="card full"><h2>Money owed</h2><div class="sub">Open invoices from sales on Net 15 / Net 30 / Consignment / Pay next visit</div>${(()=>{const L=owedList(),t=ymd();const tot=L.reduce((s,x)=>s+x.bal,0),od=L.filter(x=>x.r.dueDate&&x.r.dueDate<t);
+     return L.length?`<p style="margin:0 0 8px"><b style="font-size:18px">${money(tot)}</b> outstanding · <b style="color:${od.length?'var(--no)':'inherit'}">${od.length} overdue</b></p><table><tr><th>Store</th><th>Invoice</th><th>Terms</th><th>Total</th><th>Paid</th><th>Owes</th><th>Due</th></tr>${L.sort((a,b)=>String(a.r.dueDate||'9').localeCompare(String(b.r.dueDate||'9'))).map(x=>`<tr><td><b>${esc(x.r.store)}</b></td><td>${esc(x.r.invoiceNo)}</td><td>${esc({net15:'Net 15',net30:'Net 30',consign:'Consignment',next:'Next visit',paid:'Paid'}[x.r.terms]||'')}</td><td>${money(x.tot)}</td><td>${money(x.paid)}</td><td><b>${money(x.bal)}</b></td><td style="${x.r.dueDate&&x.r.dueDate<t?'color:var(--no);font-weight:700':''}">${x.r.dueDate||'—'}</td></tr>`).join('')}</table>`:'<div class="empty">Nothing owed right now</div>'})()}</div>
+   <div class="card full"><h2>Sell-through</h2><div class="sub">From shelf counts on revisits: how fast IV-X is actually selling in each store</div>${(()=>{const L=sellThroughAll();return L.length?`<table><tr><th>Store</th><th>Cans / week</th><th>Measured over</th><th>Last shelf count</th></tr>${L.map(x=>`<tr><td><b>${esc(x.name)}</b></td><td><b>${Math.round(x.perWeek)}</b></td><td>${x.days} days</td><td>${x.lastShelf?x.lastShelf.n+' cans · '+new Date(x.lastShelf.at).toLocaleDateString([],{month:'short',day:'numeric'}):'—'}</td></tr>`).join('')}</table>`:'<div class="empty">Shows up once a store has been counted on a revisit</div>'})()}</div>
    <div class="card full"><h2>By person</h2><table><tr><th>Person</th><th>Visits</th><th>Sold</th><th>Close rate</th><th>Cases</th><th>Orders</th><th>Collected</th><th>Samples</th></tr>
     ${Object.entries(reps).sort((a,b)=>b[1].c-a[1].c).map(([k,r])=>`<tr><td><b>${esc(k)}</b></td><td>${r.v}</td><td>${r.s}</td><td>${r.v?Math.round(r.s/r.v*100):0}%</td><td>${r.c}</td><td>${money(r.o)}</td><td>${money(r.p)}</td><td>${money(r.f)}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">No check-ins yet</td></tr>'}</table></div>
    <div class="card full"><h2>Stores</h2><div class="sub"><input id="q" placeholder="Search stores…" style="background:#fff;color:#111;border:1px solid var(--line);width:260px"> · click a column to sort</div><div style="overflow-x:auto"><table id="stab"></table></div><div id="more"></div></div>

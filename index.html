@@ -190,6 +190,14 @@ input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border
 .wdots{display:flex;gap:6px;margin:26px 0}.wdots span{width:7px;height:7px;border-radius:9px;background:#3a3e46;transition:all .2s}.wdots span.on{width:22px;background:#5eead4}
 .wbtns{display:flex;gap:10px}.wbtns button{all:unset;cursor:pointer;text-align:center;padding:15px 0;border-radius:14px;font-weight:800;font-size:16px}
 .wbtns .wnext{flex:1;background:#5eead4;color:#111}.wbtns .wback{width:90px;background:#22252b;color:#fff}
+.vcard .gt .m{font-size:12.5px}.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:10px}
+.vcell{position:relative;background:#f7f5ef;border-radius:10px;padding:8px 9px 10px;overflow:hidden}.vcell b{display:block;font:800 22px/1 'Barlow Condensed',sans-serif}.vcell small{font-size:11px;color:var(--mute);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcell i{position:absolute;left:0;bottom:0;height:3px;background:#0f766e}.vcell.low b{color:var(--fu)}.vcell.low i{background:var(--fu)}.vcell.out b{color:var(--no)}
+.qin{width:52px!important;text-align:center;font:800 18px 'Barlow Condensed',sans-serif!important;padding:6px 2px!important;border-radius:10px!important}
+.stx{margin-top:10px;font-size:13.5px;background:#ecfdf5;color:#065f46;border-radius:10px;padding:8px 10px}.stx .i{width:14px;height:14px;vertical-align:-2px}
+.rcpt{white-space:pre-wrap;background:#f7f5ef;border-radius:12px;padding:12px;font:13px/1.5 ui-monospace,Menlo,monospace;margin:12px 0 4px}
+.btnrow a.btn2 .i,.btnrow button .i{width:15px;height:15px;vertical-align:-2px;margin-right:4px}
+#dseg{margin-bottom:4px}
 </style>
 </head>
 <body>
@@ -204,6 +212,7 @@ input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border
   <div class="prog"><div class="pbar" id="pbar"></div><div class="pnums" id="pnums"></div></div>
   <div class="ctrl"><div class="seg" id="seg"><button data-f="todo" class="on">To do</button><button data-f="done">Done</button><button data-f="all">All</button></div><button class="ib" id="mapt">Map</button></div>
   <div class="mapbox" id="mapbox"></div>
+  <div id="vancard"></div>
   <div id="gcard"></div>
   <div class="list" id="list"></div>
   <button class="addbtn" id="addwalk">+ Add a walk-in store</button>
@@ -307,6 +316,7 @@ const IDB=(()=>{let dbp=null;const open=()=>dbp||(dbp=new Promise((res,rej)=>{co
 // ===================== state =====================
 let recs=LS.get('recs',{}), outbox=LS.get('outbox',[]), serverLog=LS.get('log',[]), scans=LS.get('scans',{});
 let config=LS.get('config',null)||defaultConfig(), configDirty=LS.get('configDirty',false);
+let vans=LS.get('vans',{}), vanDirty=LS.get('vanDirty',[]), dueView='fu';
 let day=LS.get('day',null)||({1:'mon',2:'tue',3:'wed',4:'thu',5:'fri'})[new Date().getDay()]||'mon';
 let filter='todo', tab='route', mapOn=false, scope='day', dueSort='date', here=null;
 const CFG=window.IVX_CONFIG||{};
@@ -404,7 +414,7 @@ function setSync(cls,txt){const e=$('#sync');e.className='sync '+cls;e.querySele
 function syncLabel(){
   if(!sb){setSync('warn','Phone only');return}
   if(!session){setSync('warn','Signed out');return}
-  const n=outbox.length+(configDirty?1:0);
+  const n=outbox.length+(configDirty?1:0)+vanDirty.length;
   if(n){setSync('warn',navigator.onLine?`${n} to upload`:`Offline · ${n} queued`);return}
   if(lastErr){setSync('bad','Sync error');return}
   setSync(lastOk?'ok':'warn',lastOk?(rtLive?'Live':'Synced'):'Connecting…');
@@ -424,6 +434,7 @@ async function syncNow(quiet){
   if(syncing||!sb||!session){syncLabel();return}syncing=true;if(!quiet)setSync('warn','Syncing…');
   try{
     if(configDirty){await q(sb.from('app_config').upsert(['products','pitch','settings'].filter(k=>config[k]!=null).map(k=>({key:k,value:config[k],updated_at:new Date().toISOString()}))));configDirty=false;LS.set('configDirty',false)}
+    if(vanDirty.length){const keys=[...vanDirty];await q(sb.from('app_config').upsert(keys.filter(k=>vans[k]).map(k=>({key:k,value:vans[k],updated_at:new Date().toISOString()}))));vanDirty=vanDirty.filter(k=>!keys.includes(k));LS.set('vanDirty',vanDirty)}
     if(outbox.length){
       const ids=[...outbox],rows=[];
       for(const id of ids){const r=recs[id];if(!r)continue;const ok=await uploadMedia(r);persist();if(ok)rows.push(toRow(r));}
@@ -439,6 +450,7 @@ async function syncNow(quiet){
     serverLog=(log||[]).map(x=>parseRow(x.data||{}));LS.set('log',serverLog);
     scans={};(sc||[]).forEach(x=>scans[x.store_key]=(scans[x.store_key]||0)+1);LS.set('scans',scans);
     if(cfg&&cfg.length&&!configDirty){const m={};cfg.forEach(x=>m[x.key]=x.value);const c=defaultConfig();config={products:m.products||c.products,pitch:m.pitch||c.pitch,settings:Object.assign(c.settings,m.settings||{})};LS.set('config',config)}
+    (cfg||[]).forEach(x=>{if(String(x.key).startsWith('van:')&&!vanDirty.includes(x.key))vans[x.key]=x.value});LS.set('vans',vans);
     persist();lastOk=Date.now();lastErr='';$('#banner').classList.remove('on');
   }catch(e){lastErr=String(e.message||e);if(/JWT|token|auth/i.test(lastErr)){banner('Your sign-in expired — sign in again in Settings.')}else if(!quiet)banner('Couldn\'t reach the server. Check-ins are safe on this phone and will upload automatically. ('+lastErr+')')}
   finally{syncing=false;syncLabel();render()}
@@ -535,7 +547,7 @@ function renderRoute(){
   const c=dayStats(day),D=DAYS.find(x=>x.k===day);
   $('#pbar').innerHTML=['sold','fu','no','skip'].map(s=>`<span style="width:${c[s]/c.total*100}%;background:${SC[s]}"></span>`).join('');
   $('#pnums').innerHTML=`<div><b>${c.done}/${c.total}</b>visited</div><div><b style="color:var(--sold)">${c.sold}</b>sold</div><div><b>${c.cases}</b>cases</div><div><b style="color:var(--no)">${c.no}</b>no sale</div><div><b style="color:var(--fu)">${c.fu}</b>follow up</div>`;
-  drawMap();renderGCard();
+  drawMap();renderVan();renderGCard();
   const st=stopsFor(day).filter(s=>{const v=statusOf(s);return filter==='all'||(filter==='todo'?!v:!!v)});
   let o=`<div class="empty" style="padding:6px 0 0;text-align:left;font-size:13px"><b style="color:${HEX[day]}">${D.d} ${D.date}</b> · ${esc(D.t)}</div>`;
   if(!st.length)o+=`<div class="empty">${filter==='todo'?'Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
@@ -664,6 +676,98 @@ function addWalkin(name,addr,phone,lat,lng){
   return id;
 }
 
+
+// ===================== van inventory =====================
+const vanKey=(d,n)=>`van:${d}:${slug(n||myName()||'me')}`;
+const myVan=d=>vans[vanKey(d||ymd())]||null;
+function vanUsed(d){const used={};let free=0;const me=myName()||'';
+  Object.values(recs).forEach(r=>{if(r.deleted||!r.at||!r.status||r.kind==='payment')return;if(ymd(new Date(r.at))!==d||(r.by||'')!==me)return;(r.items||[]).forEach(i=>used[i.id]=(used[i.id]||0)+(+i.q||0));free+=+r.freeCases||0});
+  return{used,free}}
+function vanLeft(d){d=d||ymd();const v=myVan(d);if(!v)return null;const{used}=vanUsed(d);const left={};P().forEach(p=>left[p.id]=(+(v.loaded||{})[p.id]||0)-(used[p.id]||0));return left}
+function lastVanLeft(){const me=slug(myName()||'me');const keys=Object.keys(vans).filter(k=>k.endsWith(':'+me)&&k.split(':')[1]<ymd()).sort();if(!keys.length)return{};
+  const k=keys[keys.length-1],d=k.split(':')[1],v=vans[k];const used={};const name=myName()||'';
+  Object.values(recs).forEach(r=>{if(r.deleted||!r.at||!r.status)return;if(ymd(new Date(r.at))!==d||(r.by||'')!==name)return;(r.items||[]).forEach(i=>used[i.id]=(used[i.id]||0)+(+i.q||0))});
+  const out={};P().forEach(p=>out[p.id]=Math.max(0,(+(v.loaded||{})[p.id]||0)-(used[p.id]||0)));return out}
+function renderVan(){
+  const el=$('#vancard');if(!el)return;
+  if(!P().length){el.innerHTML='';return}
+  const v=myVan(),left=vanLeft();
+  if(!v){el.innerHTML=`<div class="gcard vcard"><div class="gt"><h4>${I('box')} Your van today</h4></div><div class="gl">Log what you loaded this morning to track what's left as you sell.</div><button class="gbtn sec2" id="vload" style="width:100%;box-sizing:border-box">Load van</button></div>`;$('#vload').onclick=openVanSheet;return}
+  const{free}=vanUsed(ymd());const tot=Object.values(left).reduce((a,b)=>a+b,0);
+  el.innerHTML=`<div class="gcard vcard"><div class="gt"><h4>${I('box')} Your van today</h4><span class="m"><b style="color:${tot<=2?'var(--no)':'var(--ink)'}">${tot}</b> cases left${free?` · ${free} given free`:''}</span></div>
+   <div class="vgrid">${P().map(p=>{const l=left[p.id]||0,ld=+(v.loaded||{})[p.id]||0;return`<div class="vcell ${l<=0?'out':l<=1?'low':''}"><b>${l}</b><small>${esc(p.name)}</small><i style="width:${ld?Math.max(0,Math.min(100,l/ld*100)):0}%"></i></div>`}).join('')}</div>
+   <button class="gbtn sec2" id="vload" style="width:100%;box-sizing:border-box">Edit load</button></div>`;
+  $('#vload').onclick=openVanSheet;
+}
+function openVanSheet(){
+  cur=null;const v=myVan();const load=v?{...v.loaded}:lastVanLeft();const sh=$('#sheet');
+  const draw=()=>{sh.innerHTML=`<div class="grab"></div><h2>${v?'Edit today\'s load':'Load your van'}</h2><div class="sub">Cases of each flavor in the van at the start of today${!v&&Object.values(load).some(x=>x)?' (filled in with what was left last time)':''}.</div>
+    <div class="order" style="margin-top:14px">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b></div><div class="step sm"><button data-v="${esc(p.id)}" data-d="-1">−</button><input class="qin" data-vi="${esc(p.id)}" type="number" inputmode="numeric" value="${+load[p.id]||0}"><button data-v="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
+    <div class="otot"><span>Total</span><b>${Object.values(load).reduce((a,b)=>a+(+b||0),0)} cases</b></div></div>
+    <button class="save" id="vsave">Save load</button><button class="clear" style="color:#555" id="vx">Cancel</button>`;
+   sh.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{load[b.dataset.v]=Math.max(0,(+load[b.dataset.v]||0)+ +b.dataset.d);draw()});
+   sh.querySelectorAll('[data-vi]').forEach(i=>i.onchange=()=>{load[i.dataset.vi]=Math.max(0,parseInt(i.value)||0);draw()});
+   sh.querySelector('#vx').onclick=closeSheet;
+   sh.querySelector('#vsave').onclick=()=>{const k=vanKey(ymd());vans[k]={date:ymd(),by:myName()||'',loaded:load,at:new Date().toISOString()};LS.set('vans',vans);if(!vanDirty.includes(k))vanDirty.push(k);LS.set('vanDirty',vanDirty);closeSheet();toast('Van load saved');render();syncNow(true)}};
+  draw();showSheet();
+}
+
+// ===================== invoices & money owed =====================
+const TERMS={paid:'Paid now',net15:'Net 15',net30:'Net 30',consign:'Consignment',next:'Pay next visit'};
+const METHODS=['Cash','Zelle','Check','Card','Venmo'];
+const newInvoiceNo=()=>'IVX-'+ymd().slice(2).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
+const paymentsFor=inv=>Object.values(recs).filter(r=>r.kind==='payment'&&!r.deleted&&r.invoiceNo===inv);
+function invoiceBalance(r){const tot=parseFloat(r.orderTotal)||0;const paid=(parseFloat(r.paid)||0)+paymentsFor(r.invoiceNo).reduce((t,p)=>t+(parseFloat(p.amount)||0),0);return{tot,paid,bal:Math.round((tot-paid)*100)/100}}
+function openInvoices(){return Object.values(recs).filter(r=>!r.deleted&&r.status==='sold'&&r.invoiceNo&&(parseFloat(r.orderTotal)||0)>0).map(r=>({r,...invoiceBalance(r)})).filter(x=>x.bal>0.004)}
+function receiptText(r){const{tot,paid,bal}=invoiceBalance(r);
+  const L=['IV-X — Order receipt',`Invoice ${r.invoiceNo}`,`Date: ${new Date(r.at||Date.now()).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})}`,`Store: ${r.store}${r.address?', '+String(r.address).replace(/\s*\(.*?\)/g,''):''}`,''];
+  (r.items||[]).forEach(i=>L.push(`${i.q} cs ${i.n} × ${money(i.p)} = ${money(i.q*i.p)}`));
+  L.push('',`Total: ${money(tot)}`);
+  if(bal<=0.004)L.push(`Paid in full${r.payMethod?' ('+r.payMethod+')':''}. Thank you!`);
+  else{if(paid)L.push(`Paid: ${money(paid)}`);L.push(`Balance due: ${money(bal)}${r.dueDate?' by '+fmtDate(r.dueDate):''} (${TERMS[r.terms]||'Due'})`)}
+  L.push('',(S().receiptFooter||'Thank you for carrying IV-X!')+(myName()?' — '+myName():''));return L.join('\n')}
+function openReceipt(id){const r=recs[id];if(!r)return;cur=null;const t=receiptText(r);const ph=String(r.contactPhone||r.phone||'').replace(/[^\d+]/g,'').slice(0,15);
+  const sh=$('#sheet');sh.innerHTML=`<div class="grab"></div><h2>Receipt · ${esc(r.invoiceNo)}</h2><div class="sub">${esc(r.store)}</div><pre class="rcpt">${esc(t)}</pre>
+   <div class="btnrow"><a class="btn2 dark" href="sms:${ph}?&body=${encodeURIComponent(t)}">${I('message')} Text</a><a class="btn2" href="mailto:?subject=${encodeURIComponent('IV-X receipt '+r.invoiceNo)}&body=${encodeURIComponent(t)}">${I('file')} Email</a></div>
+   <div class="btnrow"><button class="btn2" id="rcopy">Copy</button>${navigator.share?'<button class="btn2" id="rshare">Share</button>':''}</div>
+   <button class="clear" style="color:#555" id="rdone">Done</button>`;
+  showSheet();$('#rcopy').onclick=()=>copy(t,'Receipt copied');if($('#rshare'))$('#rshare').onclick=()=>navigator.share({title:'IV-X receipt',text:t}).catch(()=>{});$('#rdone').onclick=closeSheet}
+function openPayment(id){const r=recs[id];if(!r)return;cur=null;const{bal}=invoiceBalance(r);let method='Cash';const sh=$('#sheet');
+  const draw=()=>{sh.innerHTML=`<div class="grab"></div><h2>Record payment</h2><div class="sub">${esc(r.store)} · ${esc(r.invoiceNo)} · balance ${money(bal)}</div>
+   <div class="lab">Amount ($)</div><input id="pamt" type="number" inputmode="decimal" value="${bal.toFixed(2)}">
+   <div class="lab">Method</div><div class="qc" id="pm">${METHODS.map(m=>`<button class="${m===method?'on':''}">${m}</button>`).join('')}</div>
+   <button class="save" id="psv">Save payment</button><button class="clear" style="color:#555" id="px">Cancel</button>`;
+   sh.querySelectorAll('#pm button').forEach(b=>b.onclick=()=>{const v=$('#pamt').value;method=b.textContent;draw();$('#pamt').value=v});
+   $('#px').onclick=closeSheet;
+   $('#psv').onclick=()=>{const amt=parseFloat($('#pamt').value)||0;if(amt<=0){toast('Enter an amount');return}
+     closeSheet();saveRec({id:'pay_'+r.invoiceNo+'_'+Date.now().toString(36),kind:'payment',day:'pay',status:'',store:r.store,address:r.address,phone:r.phone,storeKey:r.storeKey,invoiceNo:r.invoiceNo,amount:amt.toFixed(2),method,deleted:false},'Payment recorded')}};
+  draw();showSheet()}
+function renderOwed(){
+  const inv=openInvoices().sort((a,b)=>String(a.r.dueDate||'9').localeCompare(String(b.r.dueDate||'9')));const t=ymd();
+  const total=inv.reduce((s,x)=>s+x.bal,0),over=inv.filter(x=>x.r.dueDate&&x.r.dueDate<t);
+  let o=`<div class="kgrid" style="grid-template-columns:repeat(3,1fr)"><div class="k"><b>${money(total)}</b><small>Owed to you</small></div><div class="k"><b style="color:${over.length?'var(--no)':'var(--ink)'}">${over.length}</b><small>Overdue</small></div><div class="k"><b>${inv.length}</b><small>Open invoices</small></div></div>`;
+  if(!inv.length)o+=`<div class="empty">Nothing owed. Sales marked Net 15, Net 30, Consignment or Pay next visit show up here until they're paid.</div>`;
+  inv.forEach(({r,tot,paid,bal})=>{const od=r.dueDate&&r.dueDate<t;const ph=String(r.contactPhone||r.phone||'').replace(/[^\d+]/g,'');
+    const rem=`Hi${r.contactName?' '+String(r.contactName).split(' ')[0]:''}, this is ${myName()||'IV-X'} from IV-X. Friendly reminder: invoice ${r.invoiceNo} for ${money(bal)} is ${od?'past due':'due'}${r.dueDate?' ('+fmtDate(r.dueDate)+')':''}. Thank you!`;
+    o+=`<div class="st" style="cursor:default"><div class="num" style="background:${od?'var(--no)':'#64748b'}">${I('cash')}</div><div><h3>${esc(r.store)}</h3>
+     <div class="addr">${esc(r.invoiceNo)} · ${TERMS[r.terms]||''} · ${new Date(r.at).toLocaleDateString([],{month:'short',day:'numeric'})}</div>
+     <div class="res" style="border-top:0;padding-top:4px;margin-top:4px">Total ${money(tot)}${paid?` · paid ${money(paid)}`:''} · <b style="color:${od?'var(--no)':'var(--ink)'}">owes ${money(bal)}</b>${r.dueDate?` · ${od?'was due':'due'} ${fmtDate(r.dueDate)}`:''}</div>
+     <div class="acts"><a href="#" data-pay="${esc(r.id)}">Record payment</a>${ph?`<a href="sms:${ph}?&body=${encodeURIComponent(rem)}">Text reminder</a>`:''}<a href="#" data-rc="${esc(r.id)}">Receipt</a></div></div></div>`});
+  return o}
+
+// ===================== shelf counts / sell-through =====================
+function sellThrough(key,extra){ // extra = an in-progress visit {at, shelf, items}
+  const ev=storeTimeline(key).slice().reverse();if(extra)ev.push(extra);
+  const upc=id=>{const p=P().find(x=>x.id===id);return p&&+p.unitsPerCase?+p.unitsPerCase:1};
+  let stock=null,lastAt=null,sold={},days=0;
+  ev.forEach(e=>{const t=new Date(e.at||Date.now()).getTime();const shelf=e.shelf&&Object.keys(e.shelf).length?e.shelf:null;
+    if(shelf&&stock){const d=(t-lastAt)/864e5;if(d>0.5){Object.keys(stock).forEach(pid=>{sold[pid]=(sold[pid]||0)+Math.max(0,(stock[pid]||0)-(+shelf[pid]||0))});days+=d}}
+    const next=shelf?Object.fromEntries(Object.entries(shelf).map(([k,v])=>[k,+v||0])):{...(stock||{})};
+    (e.items||[]).forEach(i=>{next[i.id]=(next[i.id]||0)+(+i.q||0)*upc(i.id)});
+    if((e.items||[]).length||shelf){stock=next;lastAt=t}});
+  if(days<0.5)return null;const tot=Object.values(sold).reduce((a,b)=>a+b,0);
+  return{perWeek:tot/days*7,byFlavor:Object.fromEntries(Object.entries(sold).map(([k,v])=>[k,v/days*7])),days:Math.round(days)}}
+
 // ===================== check-in sheet =====================
 let draft=null,cur=null;
 function openStop(id){const s=stopsFor(day).find(x=>x.id===id);if(s)openSheet(s)}
@@ -671,7 +775,8 @@ function openSheet(s){
   cur=s;const v=live(s.id)||{};
   draft={status:v.status||'',cases:v.cases||0,bought:v.bought||'',reasons:[...(v.reasons||[])],alsoDone:[...(v.alsoDone||[])],paid:v.paid||'',notes:v.notes||'',
     contactName:v.contactName||'',contactPhone:v.contactPhone||'',items:JSON.parse(JSON.stringify(v.items||[])),freeCans:v.freeCans||0,freeCases:v.freeCases||0,discount:v.discount||'',
-    photos:[...(v.photos||[])],signature:v.signature||'',signer:v.signer||'',followUpDate:v.followUpDate||'',_fuTouched:!!v.followUpDate};
+    photos:[...(v.photos||[])],signature:v.signature||'',signer:v.signer||'',followUpDate:v.followUpDate||'',_fuTouched:!!v.followUpDate,
+    terms:v.terms||'paid',payMethod:v.payMethod||'Cash',shelf:{...(v.shelf||{})},_paidTouched:!!v.paid};
   if(!draft.contactName||!draft.contactPhone){const tl=storeTimeline(s.storeKey);const k=tl.find(e=>e.contactName||e.contactPhone);if(k){draft.contactName=draft.contactName||k.contactName||'';draft.contactPhone=draft.contactPhone||k.contactPhone||''}}
   drawSheet();showSheet();
 }
@@ -684,6 +789,9 @@ const orderTotal=()=>draft.items.reduce((t,x)=>t+x.q*(x.p||0),0);
 const orderCases=()=>draft.items.reduce((t,x)=>t+x.q,0);
 function sampleCost(){const u=avgUnitCost(),c=avgCase();return(draft.freeCans*(u||0))+(draft.freeCases*(c||0))+(parseFloat(draft.discount)||0)}
 function defaultFollow(){if(draft.status==='sold')return addDays(S().reorderDays);if(draft.status==='fu')return addDays(S().followUpDays);if(draft.status==='no')return draft.reasons.includes('Not interested')?'':addDays(21);return''}
+
+function vanAvail(pid,v){const left=vanLeft();if(!left)return'';const prev=v&&v.at&&ymd(new Date(v.at))===ymd()&&(v.by||'')===(myName()||'')?((v.items||[]).find(i=>i.id===pid)||{}).q||0:0;
+  const a=(left[pid]||0)+prev-qtyOf(pid);return a<0?` · <b style="color:var(--no)">${-a} more than in van</b>`:` · <span style="color:${a<=1?'var(--fu)':'inherit'}">${a} left in van</span>`}
 function drawSheet(){
   const s=cur,v=live(s.id)||{},tl=storeTimeline(s.storeKey).filter(e=>e.id!==s.id),stg=stageOf(s.storeKey);
   if(!draft._fuTouched)draft.followUpDate=defaultFollow();
@@ -691,9 +799,11 @@ function drawSheet(){
   let o=`<div class="grab"></div><h2>${esc(s.name)}</h2><div class="sub">${esc(s.addr)}${s.contact?' · '+esc(s.contact):''}</div>
    <div class="chips" style="margin-top:6px"><span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>${scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:''}</div>`;
   if(tl.length){o+=`<details class="hist" ${tl.length?'open':''}><summary>History · ${tl.length} earlier visit${tl.length>1?'s':''}</summary>${tl.slice(0,6).map(e=>`<div class="hrow"><b class="s-${e.status}">${SL[e.status]}</b> · ${new Date(e.at).toLocaleDateString([],{month:'short',day:'numeric'})}${e.by?' · '+esc(e.by):''}${e.cases?` · ${e.cases} cs`:''}${e.bought?`<div class="m">${esc(e.bought)}</div>`:''}${(e.reasons||[]).length?`<div class="m">${esc(e.reasons.join(', '))}</div>`:''}${e.contactName?`<div class="m">${I('user')} ${esc(e.contactName)} ${esc(e.contactPhone||'')}</div>`:''}${e.notes?`<div class="m">“${esc(e.notes)}”</div>`:''}</div>`).join('')}</details>`}
+  const stx=P().length?sellThrough(s.storeKey):null;
+  if(stx)o+=`<div class="stx">${I('chart')} Sells about <b>${Math.round(stx.perWeek)} cans/week</b> <span class="m">(last ${stx.days} days)</span></div>`;
   o+=`<div class="lab">Outcome</div><div class="outs">${['sold','no','fu','skip'].map(k=>`<button data-s="${k}" class="${draft.status===k?'on':''}">${k==='sold'?I('check')+' Sold':k==='no'?I('x')+' No sale':k==='fu'?I('refresh')+' Follow up':I('minus')+' Closed / skip'}</button>`).join('')}</div>`;
   if(saleish){
-    if(hasP){o+=`<div class="lab">Order ${draft.status==='fu'?'(if any)':''}</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b><div class="m">${p.casePrice?money(p.casePrice)+'/cs':''}${p.unitsPerCase?' · '+p.unitsPerCase+'/cs':''}</div></div><div class="step sm"><button data-dq="${esc(p.id)}" data-d="-1">−</button><span class="qv">${qtyOf(p.id)}</span><button data-dq="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
+    if(hasP){o+=`<div class="lab">Order ${draft.status==='fu'?'(if any)':''}</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b><div class="m">${p.casePrice?money(p.casePrice)+'/cs':''}${p.unitsPerCase?' · '+p.unitsPerCase+'/cs':''}${vanAvail(p.id,v)}</div></div><div class="step sm"><button data-dq="${esc(p.id)}" data-d="-1">−</button><span class="qv">${qtyOf(p.id)}</span><button data-dq="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
       <div class="otot"><span>${orderCases()} cases</span><b>${money(orderTotal())}</b></div></div>`}
     else o+=`<div class="lab">Cases ${draft.status==='fu'?'(if any)':''}</div><div class="step"><button data-c="-1">−</button><input id="cs" type="number" inputmode="numeric" min="0" value="${draft.cases}"><button data-c="1">+</button></div>
       <div class="lab">What they bought</div><input id="bought" type="text" placeholder="Flavors, e.g. 2 cs Lemon, 1 cs Berry" value="${esc(draft.bought)}"><div class="m" style="margin-top:4px">Tip: add your flavors and prices in Settings → Products to get a tap-to-order form.</div>`;
@@ -703,23 +813,33 @@ function drawSheet(){
     const cb=draft.reasons.map(r=>[r,(config.pitch&&config.pitch.objections||{})[r]]).filter(x=>x[1]);
     if(cb.length)o+=cb.map(([r,t])=>`<div class="comeback"><b>${I('message')} ${esc(r)}</b><div>${esc(fillTokens(t))}</div></div>`).join('')}
   if(draft.status){
+    if(hasP&&tl.some(e=>e.status==='sold')){const st2=sellThrough(s.storeKey,{at:new Date().toISOString(),shelf:draft.shelf,items:[]});
+      const vv=st2||stx;const need=vv&&Object.keys(draft.shelf).length?P().map(p=>{const wk=(vv.byFlavor[p.id]||0)*(S().reorderDays/7);const n=Math.max(0,Math.ceil((wk-(+draft.shelf[p.id]||0))/(+p.unitsPerCase||1)));return n?`${n} cs ${p.name}`:''}).filter(Boolean):[];
+      o+=`<div class="lab">Shelf count · cans on the shelf now</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b></div><div class="step sm"><button data-sh="${esc(p.id)}" data-d="-1">−</button><input class="qin" data-shi="${esc(p.id)}" type="number" inputmode="numeric" value="${draft.shelf[p.id]??''}" placeholder="–"><button data-sh="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}</div>
+      ${st2?`<div class="stx">${I('chart')} With this count: about <b>${Math.round(st2.perWeek)} cans/week</b></div>`:''}${need.length?`<div class="comeback"><b>${I('box')} Suggested order to last ${S().reorderDays} days</b><div>${esc(need.join(', '))}</div></div>`:''}`}
+    if(draft.status==='sold'){const tot=hasP?orderTotal():0;
+      o+=`<div class="lab">Payment</div><div class="qc" id="pt">${Object.entries(TERMS).map(([k,l])=>`<button data-t="${k}" class="${draft.terms===k?'on':''}">${l}</button>`).join('')}</div>`;
+      if(draft.terms==='paid')o+=`<div class="qc" id="pmm" style="margin-top:8px">${METHODS.map(m=>`<button class="${draft.payMethod===m?'on':''}">${m}</button>`).join('')}</div>`;
+      if(tot)o+=`<div class="m" style="margin-top:8px">Order ${money(tot)}${draft.terms!=='paid'?` · due ${draft.terms==='net15'?fmtDate(addDays(15)):draft.terms==='net30'?fmtDate(addDays(30)):draft.terms==='next'?'next visit':'when it sells'}`:''}</div>`}
     o+=`<div class="lab">Shelf photos</div><div class="thumbs edit">${draft.photos.map((t,i)=>`<span class="tw">${imgTag(t)}<button class="tx" data-rp="${i}">${I('x')}</button></span>`).join('')}<label class="addph">${I('camera')}<input id="ph" type="file" accept="image/*" capture="environment" multiple hidden></label></div>`;
     o+=`<div class="lab">Samples & freebies</div><div class="row2"><div><div class="m">Free cans</div><div class="step sm"><button data-f="freeCans" data-d="-1">−</button><span class="qv">${draft.freeCans}</span><button data-f="freeCans" data-d="1">+</button></div></div>
       <div><div class="m">Free cases</div><div class="step sm"><button data-f="freeCases" data-d="-1">−</button><span class="qv">${draft.freeCases}</span><button data-f="freeCases" data-d="1">+</button></div></div></div>
       <div class="row2" style="margin-top:8px"><input id="disc" type="number" inputmode="decimal" placeholder="Discount $" value="${esc(draft.discount)}"><div class="m" style="align-self:center">Cost: <b>${money(sampleCost())}</b>${!P().length&&(draft.freeCans||draft.freeCases)?' (add prices in Settings)':''}</div></div>`;
     o+=`<div class="lab">${draft.status==='sold'?'Reorder check':'Follow-up'} date</div><div class="row2"><input id="fud" type="date" value="${esc(draft.followUpDate)}"><button class="btn2" id="fuclr">${draft.followUpDate?'No follow-up':'Set default'}</button></div>`;
-    o+=`<div class="lab">Money collected ($)</div><input id="paid" type="number" inputmode="decimal" placeholder="0" value="${esc(draft.paid)}">
+    if(draft.status==='sold'&&draft.terms==='paid'&&!draft._paidTouched&&hasP)draft.paid=orderTotal()?orderTotal().toFixed(2):'';
+    o+=`<div class="lab">${draft.status==='sold'?(draft.terms==='paid'?'Amount paid ($)':'Collected today ($)'):'Money collected ($)'}</div><input id="paid" type="number" inputmode="decimal" placeholder="0" value="${esc(draft.paid)}">
     <div class="lab">Decision maker</div><div class="row2"><input id="cn" type="text" placeholder="Name" value="${esc(draft.contactName)}"><input id="cp" type="tel" placeholder="Cell" value="${esc(draft.contactPhone)}"></div>`;
     if(saleish)o+=`<div class="lab">Signature ${draft.status==='fu'?'(optional)':'(drop-off / consignment)'}</div>${draft.signature?`<div class="sigshow">${imgTag(draft.signature,'sigimg')}<div class="m">Signed by ${esc(draft.signer||'—')}</div><button class="btn2" id="sigclr">Clear signature</button></div>`:`<button class="btn2" id="sigbtn" style="width:100%;box-sizing:border-box">${I('pen')} Get signature</button>`}`;
     o+=`<div class="lab">Notes</div><textarea id="notes" placeholder="Anything to remember for next visit">${esc(draft.notes)}</textarea>`;
   }
   o+=`<button class="save" id="save" ${draft.status?'':'disabled'}>Save check-in</button>`;
+  if(v.status==='sold'&&v.invoiceNo)o+=`<button class="btn2" id="rcpt" style="width:100%;box-sizing:border-box;margin-top:10px">${I('file')} View / send receipt</button>`;
   if(v.status)o+=`<button class="clear" id="clr">Clear this check-in</button>`;
   if(s.kind==='walk')o+=`<button class="clear" id="delw">Remove this walk-in store</button>`;
   if(v.at)o+=`<div class="who">Last saved ${new Date(v.at).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'})}${v.by?' by '+esc(v.by):''}</div>`;
   const sh=$('#sheet'),st=sh.scrollTop;sh.innerHTML=o;sh.scrollTop=st;
   const g=id=>sh.querySelector('#'+id);
-  const grab=()=>{if(g('cs'))draft.cases=Math.max(0,parseInt(g('cs').value)||0);if(g('bought'))draft.bought=g('bought').value;if(g('paid'))draft.paid=g('paid').value;if(g('notes'))draft.notes=g('notes').value;
+  const grab=()=>{if(g('cs'))draft.cases=Math.max(0,parseInt(g('cs').value)||0);if(g('bought'))draft.bought=g('bought').value;if(g('paid')&&g('paid').value!==String(draft.paid)){draft.paid=g('paid').value;draft._paidTouched=true}if(g('notes'))draft.notes=g('notes').value;
     if(g('cn'))draft.contactName=g('cn').value;if(g('cp'))draft.contactPhone=g('cp').value;if(g('disc'))draft.discount=g('disc').value;if(g('fud')&&g('fud').value!==draft.followUpDate){draft.followUpDate=g('fud').value;draft._fuTouched=true}};
   sh.querySelectorAll('.outs button').forEach(b=>b.onclick=()=>{grab();draft.status=b.dataset.s;if(!draft._fuTouched)draft.followUpDate=defaultFollow();drawSheet()});
   sh.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{grab();draft.cases=Math.max(0,draft.cases+ +b.dataset.c);g('cs').value=draft.cases});
@@ -728,6 +848,11 @@ function drawSheet(){
   const tog=(sel,arr,redraw)=>sh.querySelectorAll(sel+' button').forEach(b=>b.onclick=()=>{grab();const t=b.textContent,i=arr.indexOf(t);i<0?arr.push(t):arr.splice(i,1);if(redraw){if(!draft._fuTouched)draft.followUpDate=defaultFollow();drawSheet()}else b.classList.toggle('on')});
   tog('#qd',draft.alsoDone,false);tog('#qr',draft.reasons,true);
   if(g('disc'))g('disc').onchange=()=>{grab();drawSheet()};
+  sh.querySelectorAll('[data-sh]').forEach(b=>b.onclick=()=>{grab();const k=b.dataset.sh;draft.shelf[k]=Math.max(0,(+draft.shelf[k]||0)+ +b.dataset.d);drawSheet()});
+  sh.querySelectorAll('[data-shi]').forEach(i=>i.onchange=()=>{grab();const k=i.dataset.shi;if(i.value==='')delete draft.shelf[k];else draft.shelf[k]=Math.max(0,parseInt(i.value)||0);drawSheet()});
+  sh.querySelectorAll('#pt button').forEach(b=>b.onclick=()=>{grab();draft.terms=b.dataset.t;if(draft.terms!=='paid'&&!draft._paidTouched)draft.paid='';drawSheet()});
+  sh.querySelectorAll('#pmm button').forEach(b=>b.onclick=()=>{grab();draft.payMethod=b.textContent;drawSheet()});
+  if(g('rcpt'))g('rcpt').onclick=()=>openReceipt(s.id);
   if(g('fuclr'))g('fuclr').onclick=()=>{grab();draft._fuTouched=true;draft.followUpDate=draft.followUpDate?'':defaultFollow()||addDays(7);drawSheet()};
   if(g('ph'))g('ph').onchange=async e=>{grab();for(const f of e.target.files){try{const d=await resizeImage(f,1400);draft.photos.push(await stashMedia(d,s.name,'photo'))}catch(err){toast('Couldn\'t read that photo')}}drawSheet()};
   sh.querySelectorAll('[data-rp]').forEach(b=>b.onclick=e=>{e.preventDefault();grab();draft.photos.splice(+b.dataset.rp,1);drawSheet()});
@@ -739,9 +864,13 @@ function drawSheet(){
     const bought=hasP?items.map(x=>`${x.q} cs ${x.n}`).join(', '):(sold?draft.bought:'');
     const r={...base(),status:draft.status,cases,bought,items,orderTotal:items.length?orderTotal().toFixed(2):'',
       reasons:draft.status==='sold'?[]:draft.reasons,alsoDone:sold?draft.alsoDone:[],paid:draft.paid,notes:draft.notes,contactName:draft.contactName,contactPhone:draft.contactPhone,
-      freeCans:draft.freeCans,freeCases:draft.freeCases,discount:draft.discount,sampleCost:sampleCost()?sampleCost().toFixed(2):'',photos:draft.photos,signature:draft.signature,signer:draft.signer,followUpDate:draft.followUpDate};
-    closeSheet();saveRec(r)};
-  if(g('clr'))g('clr').onclick=()=>{const r=base();Object.assign(r,{status:'',cases:0,bought:'',reasons:[],alsoDone:[],paid:'',notes:'',items:[],orderTotal:'',freeCans:0,freeCases:0,discount:'',sampleCost:'',photos:[],signature:'',signer:'',followUpDate:''});
+      freeCans:draft.freeCans,freeCases:draft.freeCases,discount:draft.discount,sampleCost:sampleCost()?sampleCost().toFixed(2):'',photos:draft.photos,signature:draft.signature,signer:draft.signer,followUpDate:draft.followUpDate,shelf:draft.shelf};
+    if(draft.status==='sold'){r.terms=draft.terms;r.payMethod=draft.terms==='paid'?draft.payMethod:'';r.invoiceNo=(recs[s.id]||{}).invoiceNo||newInvoiceNo();
+      r.dueDate=draft.terms==='net15'?addDays(15):draft.terms==='net30'?addDays(30):draft.terms==='next'?(draft.followUpDate||''):draft.terms==='paid'?ymd():'';
+      if(draft.terms==='paid'&&!r.paid&&r.orderTotal)r.paid=r.orderTotal}
+    else{r.terms='';r.invoiceNo='';r.dueDate=''}
+    closeSheet();saveRec(r);if(r.status==='sold'&&parseFloat(r.orderTotal)>0)setTimeout(()=>openReceipt(r.id),350)};
+  if(g('clr'))g('clr').onclick=()=>{const r=base();Object.assign(r,{status:'',cases:0,bought:'',reasons:[],alsoDone:[],paid:'',notes:'',items:[],orderTotal:'',freeCans:0,freeCases:0,discount:'',sampleCost:'',photos:[],signature:'',signer:'',followUpDate:'',shelf:{},terms:'',invoiceNo:'',dueDate:'',payMethod:''});
     if(s.kind==='revisit'){r.deleted=true}closeSheet();saveRec(r,'Check-in cleared')};
   if(g('delw'))g('delw').onclick=()=>{const r={...base(),deleted:true};closeSheet();saveRec(r,'Store removed')};
 }
@@ -776,12 +905,15 @@ $('#addwalk').onclick=()=>{
 
 // ===================== follow-ups tab =====================
 function renderDue(){
+  if(dueView==='owed'){$('#v-due').innerHTML=`<div class="sum">${dueSeg()}${renderOwed()}</div>`;bindDueSeg();
+    $('#v-due').querySelectorAll('[data-pay]').forEach(b=>b.onclick=e=>{e.preventDefault();openPayment(b.dataset.pay)});
+    $('#v-due').querySelectorAll('[data-rc]').forEach(b=>b.onclick=e=>{e.preventDefault();openReceipt(b.dataset.rc)});return}
   const t=ymd(),wk=addDays(7);let items=dueList();
   const dist=d=>here&&d.lat?Math.hypot((d.lat-here[0])*111,(d.lng-here[1])*84):1e9;
   items.sort(dueSort==='near'?(a,b)=>dist(a)-dist(b):(a,b)=>String(a.due).localeCompare(String(b.due)));
   const groups=[['Overdue',x=>x.due<t],['Today',x=>x.due===t],['This week',x=>x.due>t&&x.due<=wk],['Later',x=>x.due>wk]];
   const pipe={};STAGES.forEach(s=>pipe[s]=0);Object.keys(directory()).forEach(k=>pipe[stageOf(k)]++);
-  let o=`<div class="sum"><div class="sec" style="margin-top:0"><h4>Pipeline · every store</h4><div class="funnel">${STAGES.map(s=>`<div class="fstep"><span style="background:${STAGE_COL[s]}"></span><b>${pipe[s]}</b><small>${s}</small></div>`).join('')}</div></div>
+  let o=`<div class="sum">${dueSeg()}<div class="sec" style="margin-top:12px"><h4>Pipeline · every store</h4><div class="funnel">${STAGES.map(s=>`<div class="fstep"><span style="background:${STAGE_COL[s]}"></span><b>${pipe[s]}</b><small>${s}</small></div>`).join('')}</div></div>
    <div class="ctrl" style="padding:12px 0 2px"><div class="seg" id="dsort"><button data-s="date" class="${dueSort==='date'?'on':''}">By date</button><button data-s="near" class="${dueSort==='near'?'on':''}">Nearest to me</button></div></div>`;
   const now=items.filter(x=>x.due<=wk);
   if(now.length){const legs=now.slice(0,LEG).map(x=>({...x,kind:x.kind||'acct'}));
@@ -796,13 +928,15 @@ function renderDue(){
        <div class="res" style="border-top:0;padding-top:4px;margin-top:4px">Last: <b class="s-${L.status}">${SL[L.status]}</b> ${new Date(L.at).toLocaleDateString([],{month:'short',day:'numeric'})}${L.cases?` · ${L.cases} cs`:''}${L.bought?' · '+esc(L.bought):''}${(L.reasons||[]).length?' · '+esc(L.reasons.join(', ')):''}${L.contactName?`<div class="m">${I('user')} ${esc(L.contactName)} ${esc(L.contactPhone||'')}</div>`:''}${L.notes?`<div class="m">“${esc(L.notes)}”</div>`:''}</div>
        <div class="acts"><a href="${navLink({...d,kind:d.kind||'acct'},d.day)}" target="_blank" rel="noopener" data-stop>Navigate</a>${ph?`<a href="tel:${ph[0].replace(/-/g,'')}" data-stop>Call</a>`:''}${L.contactPhone?`<a href="sms:${String(L.contactPhone).replace(/[^\d+]/g,'')}" data-stop>Text</a>`:''}<a href="#" data-open>Check in</a></div></div></div>`});
   });
-  o+='</div>';$('#v-due').innerHTML=o;
+  o+='</div>';$('#v-due').innerHTML=o;bindDueSeg();
   $('#dsort').querySelectorAll('button').forEach(b=>b.onclick=()=>{dueSort=b.dataset.s;if(dueSort==='near'&&!here)locate(()=>renderDue(),()=>{dueSort='date';renderDue()});else renderDue()});
   $('#v-due').querySelectorAll('.st[data-k]').forEach(el=>el.onclick=e=>{if(e.target.closest('[data-stop]'))return;e.preventDefault();
     const d=items.find(x=>x.storeKey===el.dataset.k);const id=`rv_${d.storeKey}_${ymd().replace(/-/g,'')}`.slice(0,190);
     openSheet({id,kind:'revisit',name:d.name,addr:d.addr||'',contact:d.phone||'',storeKey:d.storeKey,revisitOf:d.last.id,lat:d.lat,lng:d.lng,day:d.day})});
 }
 
+function dueSeg(){const n=openInvoices().length;return`<div class="seg" id="dseg"><button data-v="fu" class="${dueView==='fu'?'on':''}">Follow-ups</button><button data-v="owed" class="${dueView==='owed'?'on':''}">Money owed${n?` (${n})`:''}</button></div>`}
+function bindDueSeg(){$('#dseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{dueView=b.dataset.v;renderDue()})}
 // ===================== pitch tab =====================
 function renderPitch(){
   const p=config.pitch||{},prods=P();
@@ -876,6 +1010,7 @@ function renderSet(){
   o+=box('qr',I('qr')+'QR shelf tags',`<p>Each store gets its own QR tag to stick on the shelf or cooler. Scans are counted per store and send shoppers to this link. Print them from the <a href="dashboard.html#qr" target="_blank">dashboard</a>.</p>
    <input id="qru" type="text" placeholder="https://www.tiktok.com/@yourbrand" value="${esc(st.qrUrl||'')}"><div class="btnrow"><button class="btn2 dark" id="qrsave">Save link</button></div>
 `);
+  o+=box('rc',I('file')+'Receipts',`<p>Last line on every receipt you text or email to a store.</p><input id="rf" type="text" placeholder="Thank you for carrying IV-X!" value="${esc(st.receiptFooter||'')}"><div class="btnrow"><button class="btn2 dark" id="rfsave">Save</button></div>`);
   o+=box('fu',I('calendar')+'Follow-up timing',`<div class="row2"><label class="m">Reorder check after (days)<input id="rd" type="number" value="${esc(st.reorderDays)}"></label><label class="m">Follow up after (days)<input id="fd" type="number" value="${esc(st.followUpDays)}"></label></div>
    <div class="btnrow"><button class="btn2 dark" id="fusave">Save</button></div>`);
   o+=box('map',I('map')+'Live Google Map',`<p>Paste a Google Maps API key for the live map and the store finder. Without one, the “Open in Google Maps” buttons still work.</p>
@@ -898,6 +1033,7 @@ function renderSet(){
     config.pitch={sellSheetUrl:g('ssu').value.trim(),points:g('pts').value.split('\n').map(x=>x.trim()).filter(Boolean),objections:ob};saveConfig()};
   g('qrsave').onclick=()=>{config.settings=Object.assign({},config.settings,{qrUrl:g('qru').value.trim()});saveConfig()};
   g('fusave').onclick=()=>{config.settings=Object.assign({},config.settings,{reorderDays:+g('rd').value||14,followUpDays:+g('fd').value||3,});saveConfig()};
+  g('rfsave').onclick=()=>{config.settings=Object.assign({},config.settings,{receiptFooter:g('rf').value.trim()});saveConfig()};
   g('mksave').onclick=()=>{const v=g('mk').value.trim();if(v&&!/^AIza[\w-]{20,}$/.test(v)){toast('That doesn\'t look like a Google API key');return}LS.set('mapsKey',v);toast(v?'Key saved — reopen the app to load the map':'Key removed');renderSet()};
   if(g('inst'))g('inst').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;renderSet()};
   if(g('wtour'))g('wtour').onclick=()=>{wStep=0;showWelcome()};
