@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IV-X Field</title>
+<meta name="theme-color" content="#111316">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IV-X Field">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+:root{--bg:#f3f2ee;--card:#fff;--ink:#15171b;--mute:#6b6f76;--line:#e5e2db;--water:#d9e6ef;--land:#fbfaf7;--road:#e3e0d8;--road2:#d2cec4;
+ --sold:#16a34a;--no:#dc2626;--fu:#d97706;--skip:#64748b;--todo:#c9c5bb;--pro:#16a34a;--acc:#111316}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 Inter,system-ui,sans-serif}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:20;background:#111316;color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.top h1{margin:0;font:800 22px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:.4px}
+.top h1 span{color:#5eead4}
+.sync{font-size:11px;color:#a7abb3;display:flex;align-items:center;gap:5px}
+.sync i{width:7px;height:7px;border-radius:50%;background:#777;display:inline-block}
+.sync.ok i{background:#22c55e}.sync.warn i{background:#f59e0b}.sync.bad i{background:#ef4444}
+.days{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.days button{all:unset;flex:1 1 0;min-width:0;text-align:center;padding:7px 8px 6px;border-radius:10px;background:#22252b;color:#cfd2d8;font-weight:700;font-size:13px;cursor:pointer;position:relative;overflow:hidden}
+.days button small{display:block;font-size:10px;font-weight:600;opacity:.75;margin-top:1px}
+.days button.on{background:#fff;color:#111}
+.days button .bar{position:absolute;left:0;bottom:0;height:3px;background:#22c55e}
+.prog{padding:12px 14px 4px}
+.pbar{height:8px;border-radius:99px;background:#e2dfd7;overflow:hidden;display:flex}
+.pbar span{display:block;height:100%}
+.pnums{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--mute)}
+.pnums b{color:var(--ink);font-size:16px;display:block;font-family:'Barlow Condensed';font-weight:700}
+.ctrl{display:flex;gap:8px;padding:8px 14px;align-items:center}
+.seg{display:flex;background:#e7e4dc;border-radius:10px;padding:3px;flex:1}
+.seg button{all:unset;flex:1;text-align:center;padding:7px 0;border-radius:8px;font-weight:700;font-size:13px;color:#555;cursor:pointer}
+.seg button.on{background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.ib{all:unset;cursor:pointer;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-weight:700;font-size:13px;white-space:nowrap}
+.mapbox{margin:4px 14px 8px;border-radius:14px;overflow:hidden;border:1px solid var(--line);display:none}
+.mapbox.on{display:block}
+svg.map{display:block;width:100%;height:auto;background:var(--water)}
+.list{padding:0 14px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:10px 0;padding:12px;display:grid;grid-template-columns:36px 1fr;gap:10px;cursor:pointer;position:relative}
+.st.done{opacity:.92}
+.num{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:800 15px 'Barlow Condensed';color:#fff;background:var(--todo)}
+.st.pro .num{border-radius:9px;background:#fff;color:var(--pro);border:2px dashed var(--pro)}
+.st h3{margin:0;font-size:15.5px;line-height:1.25}
+.addr{font-size:13px;color:var(--mute);margin-top:2px}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.chip{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:99px;white-space:nowrap;letter-spacing:.02em}
+.c-order{background:#e0f0ff;color:#0b5ea8}.c-collect{background:#fff1d6;color:#8a5a00}.c-warn,.c-ticket{background:#fde4e1;color:#b42318}
+.c-winback{background:#f1e6fb;color:#6b2fa0}.c-check{background:#eeeeec;color:#555}.c-new{background:#dcfce7;color:#166534}
+.c-fix{background:#d9f5f2;color:#0f766e}.c-vip{background:#fff7c2;color:#7a5b00}.c-pro{background:#dcfce7;color:#166534}.c-walk{background:#e0e7ff;color:#3730a3}
+.note{font-size:12.5px;margin-top:6px;color:#4b4f56;background:#f7f5ef;border-radius:8px;padding:6px 8px}
+.res{margin-top:8px;font-size:13px;border-top:1px dashed var(--line);padding-top:7px}
+.res b.s-sold{color:var(--sold)}.res b.s-no{color:var(--no)}.res b.s-fu{color:var(--fu)}.res b.s-skip{color:var(--skip)}
+.acts{display:flex;gap:6px;margin-top:9px}
+.acts a{flex:1;text-align:center;text-decoration:none;font-weight:700;font-size:13px;padding:8px 0;border-radius:9px;background:#f1efe9;color:#111}
+.addbtn{display:block;margin:14px;padding:14px;text-align:center;border:2px dashed #c9c5bb;border-radius:14px;font-weight:700;color:#555;cursor:pointer;background:transparent;width:calc(100% - 28px);font-size:15px}
+.empty{padding:30px 14px;text-align:center;color:var(--mute)}
+/* bottom tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;background:#fff;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{all:unset;flex:1;text-align:center;padding:10px 0 9px;font-weight:700;font-size:12px;color:#888;cursor:pointer}
+.tabs button .ic{display:block;font-size:19px;line-height:1;margin-bottom:3px}
+.tabs button.on{color:#111}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none}
+.scrim.on{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:#fff;border-radius:18px 18px 0 0;max-height:92vh;overflow-y:auto;transform:translateY(105%);transition:transform .22s ease;padding:0 16px calc(18px + env(safe-area-inset-bottom));max-width:640px;margin:0 auto}
+.sheet{visibility:hidden}.sheet.on{transform:none;visibility:visible}
+.grab{width:42px;height:5px;border-radius:9px;background:#ddd;margin:9px auto 4px}
+.sheet h2{margin:6px 0 2px;font-size:19px}
+.sheet .sub{color:var(--mute);font-size:13px}
+.lab{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#777;margin:16px 0 7px}
+.outs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.outs button{all:unset;cursor:pointer;text-align:center;padding:13px 6px;border-radius:12px;border:2px solid var(--line);font-weight:800;font-size:14.5px}
+.outs button[data-s=sold].on{background:var(--sold);border-color:var(--sold);color:#fff}
+.outs button[data-s=no].on{background:var(--no);border-color:var(--no);color:#fff}
+.outs button[data-s=fu].on{background:var(--fu);border-color:var(--fu);color:#fff}
+.outs button[data-s=skip].on{background:var(--skip);border-color:var(--skip);color:#fff}
+.step{display:flex;align-items:center;gap:10px}
+.step button{all:unset;cursor:pointer;width:46px;height:46px;border-radius:12px;background:#f1efe9;text-align:center;font-size:24px;font-weight:700;line-height:46px}
+.step input{width:80px;text-align:center;font:800 26px 'Barlow Condensed';border:2px solid var(--line);border-radius:12px;padding:6px}
+.qc{display:flex;flex-wrap:wrap;gap:6px}
+.qc button{all:unset;cursor:pointer;padding:7px 11px;border-radius:99px;border:1.5px solid var(--line);font-size:13px;font-weight:600}
+.qc button.on{background:#111;color:#fff;border-color:#111}
+textarea,input[type=text],input[type=number],input[type=tel]{width:100%;font:inherit;font-size:16px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;color:inherit}
+textarea{min-height:70px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.save{all:unset;cursor:pointer;display:block;text-align:center;width:100%;padding:15px 0;border-radius:14px;background:#111;color:#fff;font-weight:800;font-size:16px;margin-top:18px;box-sizing:border-box}
+.save:disabled{opacity:.5}
+.clear{all:unset;cursor:pointer;display:block;text-align:center;width:100%;padding:12px 0;color:#b42318;font-weight:700;font-size:14px;margin-top:6px}
+.who{font-size:12px;color:var(--mute);margin-top:10px;text-align:center}
+.banner{margin:10px 14px 0;padding:9px 12px;border-radius:10px;font-size:13px;background:#fff7e6;border:1px solid #f5d48a;color:#7a5200;display:none}
+.banner.on{display:block}
+/* summary */
+.sum{padding:12px 14px}
+.kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.k{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+.k b{display:block;font:800 26px/1 'Barlow Condensed'}
+.k small{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.sec{background:#fff;border:1px solid var(--line);border-radius:14px;margin-top:12px;overflow:hidden}
+.sec h4{margin:0;padding:11px 12px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line)}
+.sec .it{padding:9px 12px;border-top:1px solid var(--line);font-size:13.5px}
+.sec .it:first-of-type{border-top:0}
+.sec .it .m{color:var(--mute);font-size:12.5px}
+.scope{display:flex;gap:6px;margin-bottom:10px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;opacity:0;transition:opacity .2s;z-index:60;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1}
+@media(min-width:700px){main{max-width:640px;margin:0 auto}}
+
+.gear{all:unset;cursor:pointer;font-size:18px;padding:2px 4px;margin-left:8px;color:#cfd2d8}
+.setbox{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 14px}
+.setbox summary{list-style:none;cursor:pointer}.setbox summary::-webkit-details-marker{display:none}
+.setbox summary h3{margin:0;font-size:16px;display:flex;justify-content:space-between}.setbox summary h3:after{content:'▾';color:#aaa}
+.setbox[open] summary h3:after{content:'▴'}
+.setbox p{margin:8px 0 10px;color:var(--mute);font-size:13px}
+.setbox label.m,.row3 label{display:block;font-size:11.5px;color:var(--mute);font-weight:700}
+.btnrow{display:flex;gap:8px;margin-top:10px}
+.btn2{all:unset;cursor:pointer;flex:1;text-align:center;padding:11px 0;border-radius:11px;background:#f1efe9;font-weight:700;font-size:14px;text-decoration:none;color:#111}
+.btn2.dark{background:#111;color:#fff}.btn2:disabled{opacity:.5}
+.msg{font-size:13px;margin-top:8px}
+.install{display:none;margin:10px 14px 0;padding:10px 12px;border-radius:10px;background:#ecfeff;border:1px solid #a5f3fc;color:#155e75;font-size:13px}
+.install.on{display:block}.install b{cursor:pointer;text-decoration:underline}
+.gcard{background:#fff;border:1px solid var(--line);border-radius:14px;margin:6px 14px 4px;padding:12px}
+.gcard .gt{display:flex;justify-content:space-between;align-items:center;gap:8px}.gcard h4{margin:0;font-size:14px}
+.gcard .gl{font-size:12.5px;color:var(--mute);margin-top:4px;line-height:1.35}
+.gbtn{all:unset;cursor:pointer;display:block;text-align:center;margin-top:10px;padding:12px 0;border-radius:11px;background:#1a73e8;color:#fff;font-weight:800;font-size:15px;text-decoration:none}
+.gbtn.sec2{background:#e8f0fe;color:#1a56c4;font-size:13px;padding:9px 0;margin-top:7px}
+#gmap{width:100%;height:380px;background:#e5e3df}.mapnote{font-size:11.5px;color:var(--mute);padding:6px 10px;background:#fff}
+.m{font-size:12px;color:var(--mute)}
+.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.thumb{width:62px;height:62px;object-fit:cover;border-radius:9px;background:#eee;display:block}
+.thumbs.edit .tw{position:relative}.tx{all:unset;cursor:pointer;position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#111;color:#fff;font-size:11px;text-align:center;line-height:20px}
+.addph{width:62px;height:62px;border-radius:9px;border:2px dashed #c9c5bb;display:grid;place-items:center;font-size:24px;cursor:pointer}
+.order{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.orow{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-top:1px solid var(--line)}.orow:first-child{border-top:0}
+.otot{display:flex;justify-content:space-between;padding:10px;background:#f7f5ef;font-size:15px}
+.step.sm button{width:38px;height:38px;line-height:38px;font-size:20px}.step.sm{gap:6px}.qv{min-width:26px;text-align:center;font:800 20px 'Barlow Condensed'}
+.comeback{margin-top:8px;background:#eef6ff;border-left:3px solid #1a73e8;border-radius:0 10px 10px 0;padding:8px 10px;font-size:13.5px}
+.comeback b{display:block;font-size:12px;color:#1a56c4;margin-bottom:2px}
+details.hist{margin-top:10px;background:#f7f5ef;border-radius:12px;padding:8px 10px}details.hist summary{font-weight:700;font-size:13px;cursor:pointer}
+.hrow{font-size:13px;padding:6px 0;border-top:1px solid #e9e5da}.hrow:first-of-type{border-top:0}
+.hrow b.s-sold{color:var(--sold)}.hrow b.s-no{color:var(--no)}.hrow b.s-fu{color:var(--fu)}.hrow b.s-skip{color:var(--skip)}
+.sigpad{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:grid;place-items:center;padding:14px}
+.sigbox{background:#fff;border-radius:16px;padding:14px;width:100%;max-width:560px}.sigbox h3{margin:0 0 8px}
+#sigc{width:100%;height:200px;border:2px dashed #c9c5bb;border-radius:12px;touch-action:none;background:#fff;margin-bottom:8px}
+.sigimg{max-width:220px;border:1px solid var(--line);border-radius:8px;display:block}.sigshow .btn2{margin-top:6px;display:block}
+.fres{margin-top:10px}.frow{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.fbtns{display:flex;flex-direction:column;gap:6px;min-width:76px}.fbtns .btn2{padding:8px 0;font-size:13px}
+.qlink{padding:7px 11px;border-radius:99px;border:1.5px solid var(--line);font-size:13px;font-weight:600;color:#111;text-decoration:none}
+.funnel{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:10px 8px}.fstep{text-align:center}
+.fstep span{display:block;height:5px;border-radius:9px;margin-bottom:5px}.fstep b{font:800 20px 'Barlow Condensed';display:block}.fstep small{font-size:9.5px;color:var(--mute);font-weight:700;line-height:1.1;display:block}
+.ptab{width:100%;border-collapse:collapse;font-size:13px}.ptab th{text-align:left;font-size:10.5px;color:var(--mute);text-transform:uppercase;padding:8px 6px;border-bottom:1px solid var(--line)}.ptab td{padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+.prow{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.tx2{all:unset;cursor:pointer;color:#b42318;font-size:12.5px;font-weight:700;margin-top:6px;display:inline-block}
+.bdg{font-style:normal;background:#dc2626;color:#fff;font-size:10px;font-weight:800;border-radius:99px;padding:1px 5px;margin-left:2px;vertical-align:top}
+.tabs button{font-size:11px}
+input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;color:inherit}
+.login{position:fixed;inset:0;z-index:90;background:#111316;display:none;place-items:center;padding:20px}
+.login.on{display:grid}.lbox{width:100%;max-width:380px;color:#fff}
+.lbox h1{font:800 34px/1 'Barlow Condensed',sans-serif;text-transform:uppercase;margin:0 0 8px}.lbox h1 span{color:#5eead4}
+.lbox p{color:#a7abb3;font-size:14px;margin:0 0 16px}.lbox input{width:100%;font:inherit;font-size:16px;border:1.5px solid #33363d;background:#1b1e23;color:#fff;border-radius:12px;padding:12px;margin-bottom:10px}
+.lbox .save{background:#5eead4;color:#111}.lmsg{color:#fca5a5;font-size:13px;margin-top:10px;min-height:18px}
+</style>
+</head>
+<body>
+<header>
+ <div class="top"><h1>IV-X <span>Field</span></h1><div style="display:flex;align-items:center"><div class="sync" id="sync"><i></i><span>Starting…</span></div><button class="gear" id="gear" aria-label="Settings">⚙︎</button></div></div>
+ <div class="days" id="days"></div>
+</header>
+<main>
+ <div class="banner" id="banner"></div>
+ <div class="install" id="install"></div>
+ <section id="v-route">
+  <div class="prog"><div class="pbar" id="pbar"></div><div class="pnums" id="pnums"></div></div>
+  <div class="ctrl"><div class="seg" id="seg"><button data-f="todo" class="on">To do</button><button data-f="done">Done</button><button data-f="all">All</button></div><button class="ib" id="mapt">Map</button></div>
+  <div class="mapbox" id="mapbox"></div>
+  <div id="gcard"></div>
+  <div class="list" id="list"></div>
+  <button class="addbtn" id="addwalk">+ Add a walk-in store</button>
+ </section>
+ <section id="v-due" hidden></section>
+ <section id="v-pitch" hidden></section>
+ <section id="v-sum" hidden><div class="sum" id="sum"></div></section>
+ <section id="v-set" hidden></section>
+</main>
+<nav class="tabs"><button data-t="route" class="on"><span class="ic">📍</span>Route</button><button data-t="due"><span class="ic">🔁</span>Follow-ups</button><button data-t="pitch"><span class="ic">💬</span>Pitch</button><button data-t="sum"><span class="ic">📊</span>Results</button><button data-t="set"><span class="ic">⚙︎</span>Settings</button></nav>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="qr.js"></script>
+<script>
+const PLAN={"mon":{"start":{"lat":40.7785,"lng":-73.9225,"name":"RFK Bridge (Astoria exit)"},"stops":[{"day":"mon","sheet":"Astoria","n":1,"name":"Parkside Market","addr":"18-59 Ditmars Blvd","contact":"347-925-3877","lat":40.78002,"lng":-73.92103,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":2,"name":"Cherry Valley Farm Market","addr":"20-16 21st Ave","contact":"347-484-0344","lat":40.78113,"lng":-73.91796,"kind":"acct"},{"day":"mon","name":"Lincoln Market","addr":"21-21 31st St, Astoria","lat":40.7767,"lng":-73.91035,"kind":"prospect","contact":""},{"day":"mon","name":"Natural Frontier Market","addr":"31-28 Ditmars Blvd, Astoria","lat":40.77508,"lng":-73.91178,"kind":"prospect","contact":""},{"day":"mon","sheet":"Astoria","n":3,"name":"Sal, Kris & Charlie's Deli","addr":"33-12 23rd Ave","contact":"718-309-3690","lat":40.77381,"lng":-73.9111,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":4,"name":"Astor Deli","addr":"25-08 31st St","contact":"201-310-7366","lat":40.77233,"lng":-73.91517,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":7,"name":"Gaspar's Deli","addr":"44-02 25th Ave","contact":"347-935-6419","lat":40.76728,"lng":-73.9057,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":6,"name":"Sunoco \u2013 Astoria Blvd","addr":"49-05 Astoria Blvd S","contact":"929-268-5861","lat":40.7635,"lng":-73.90409,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":5,"name":"Sakura Mart (Mobil)","addr":"44-02 Astoria Blvd S","contact":"914-303-1355","lat":40.76544,"lng":-73.90773,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":8,"name":"B&G Deli Convenience","addr":"44-02 28th Ave","contact":"347-424-2752","lat":40.76384,"lng":-73.9095,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":9,"name":"Astoria Deli","addr":"45-20 30th Ave","contact":"718-626-2659","lat":40.76108,"lng":-73.91116,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":10,"name":"48 Deli","addr":"47-20 Broadway","contact":"631-710-1639","lat":40.75617,"lng":-73.91308,"kind":"acct"},{"day":"mon","name":"Vitality & Health Natural Market","addr":"46-03 Broadway, Astoria","lat":40.75664,"lng":-73.91396,"kind":"prospect","contact":""},{"day":"mon","sheet":"Astoria","n":11,"name":"Navya 43 Deli","addr":"43-20 34th Ave","contact":"347-399-3581","lat":40.75525,"lng":-73.91802,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":12,"name":"Liberty Deli & Convenience","addr":"34-26 Steinway St","contact":"929-789-2619","lat":40.75561,"lng":-73.92002,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":13,"name":"3118 Broadway Deli","addr":"31-18 Broadway","contact":"929-462-8494","lat":40.7624,"lng":-73.92473,"kind":"acct"},{"day":"mon","name":"Greenbay Market","addr":"31-10 30th Ave, Astoria","lat":40.76656,"lng":-73.92143,"kind":"prospect","contact":""},{"day":"mon","sheet":"Astoria","n":30,"name":"21st Street Market Place","addr":"28-16 21st St","contact":"347-828-0653","lat":40.77255,"lng":-73.9265,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":29,"name":"NY Grill \u2013 21st","addr":"31-86 21st St","contact":"347-968-0040","lat":40.76735,"lng":-73.93134,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":28,"name":"Mobil \u2013 21st St","addr":"32-09 21st St","contact":"646-821-1013","lat":40.76702,"lng":-73.93161,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":27,"name":"Moonlight Deli & Smoke","addr":"33-22 21st St","contact":"631-974-7242","lat":40.76505,"lng":-73.93323,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":26,"name":"Spring Food Spot Corp","addr":"14-21 Broadway","contact":"347-728-6514","lat":40.76901,"lng":-73.93711,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":25,"name":"Cousin's Deli","addr":"9-10 34th Ave","contact":"347-670-8984","lat":40.7634,"lng":-73.9377,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":24,"name":"Vape Blvd","addr":"34-43 Vernon Blvd","contact":"347-720-1614 / 929-417-9551","lat":40.7607,"lng":-73.9402,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":14,"name":"Liberty Convenience & Deli","addr":"32-02 36th Ave","contact":"929-789-2619","lat":40.75631,"lng":-73.92887,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":16,"name":"34th St Grab & Go","addr":"34-17 Northern Blvd","contact":"929-372-4530","lat":40.7524,"lng":-73.931,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":15,"name":"Liberty Deli & Grocery","addr":"38-35 Crescent St","contact":"662-370-9977","lat":40.7531,"lng":-73.9352,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":17,"name":"Hudson Food Market","addr":"29-09 Queens Plaza N","contact":"917-530-6522","lat":40.7507,"lng":-73.9375,"kind":"acct"},{"day":"mon","name":"City Acres Market","addr":"28-07 Jackson Ave, LIC","lat":40.7488,"lng":-73.9382,"kind":"prospect","contact":""},{"day":"mon","sheet":"Astoria","n":18,"name":"Bonjour","addr":"21-59 44th Dr","contact":"929-721-6594","lat":40.7488,"lng":-73.9478,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":23,"name":"Prestige Market Place \u2013 Center","addr":"45-45 Center Blvd","contact":"201-375-5128","lat":40.747,"lng":-73.9572,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":19,"name":"Yashi Food","addr":"46-30 Vernon Blvd","contact":"929-438-9448","lat":40.7452,"lng":-73.953,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":20,"name":"LuLu Lala Deli","addr":"49-16 Vernon Blvd","contact":"347-840-8581","lat":40.743,"lng":-73.954,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":21,"name":"Mumta Grocery","addr":"50-12 Vernon Blvd","contact":"929-257-4356","lat":40.742,"lng":-73.9546,"kind":"acct"},{"day":"mon","sheet":"Astoria","n":22,"name":"Luminesence Market","addr":"52-00 2nd St","contact":"347-441-8687","lat":40.741,"lng":-73.9594,"kind":"acct"}],"miles":11.7},"tue":{"start":{"lat":40.769,"lng":-73.901,"name":"Grand Central Pkwy / BQE"},"stops":[{"day":"tue","sheet":"Jackson Heights","n":31,"name":"N&R Deli","addr":"77-19 25th Ave","contact":"908-875-6571","lat":40.7645,"lng":-73.889,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":32,"name":"Galaxy Station 7 Mini Mart","addr":"85-05 Astoria Blvd","contact":"347-433-9794","lat":40.7613,"lng":-73.881,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":29,"name":"Hanu Convenience","addr":"87-03 Northern Blvd","contact":"347-783-4346","lat":40.7556,"lng":-73.8792,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":30,"name":"Dhaka Bazar Halal Meat","addr":"69-17 Northern Blvd","contact":"646-250-7975","lat":40.7547,"lng":-73.8965,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":15,"name":"Mach Bazaar","addr":"71-08 35th Ave","contact":"917-969-7272","lat":40.75115,"lng":-73.89458,"kind":"acct"},{"day":"tue","name":"Subzi Mandi","addr":"72-30 37th Ave, Jackson Heights","lat":40.74872,"lng":-73.89313,"kind":"prospect","contact":""},{"day":"tue","sheet":"Jackson Heights","n":13,"name":"Stop & Go Convenience Smoke Shop","addr":"71-31 Roosevelt Ave","contact":"212-363-0409","lat":40.7466,"lng":-73.8942,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":14,"name":"Patel Brothers","addr":"37-27 74th St","contact":"929-268-4368 / 718-898-3445","lat":40.74843,"lng":-73.89147,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":16,"name":"Premium Supermarket","addr":"74-18 37th Ave","contact":"917-622-7309","lat":40.74881,"lng":-73.89131,"kind":"acct"},{"day":"tue","name":"Food Dynasty","addr":"75-07 37th Ave, Jackson Heights","lat":40.74886,"lng":-73.89044,"kind":"prospect","contact":""},{"day":"tue","sheet":"Jackson Heights","n":17,"name":"Lucky Market","addr":"79-01 37th Ave","contact":"704-907-4335","lat":40.74905,"lng":-73.8867,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":18,"name":"37th Ave Grocery","addr":"82-06 37th Ave","contact":"646-737-6862","lat":40.7492,"lng":-73.88382,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":19,"name":"Mini Mart","addr":"83-10 37th Ave","contact":"347-245-9933","lat":40.74925,"lng":-73.88286,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":20,"name":"Quick Stop \u2013 90th St","addr":"37-59 90th St","contact":"917-438-8657","lat":40.74885,"lng":-73.87608,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":25,"name":"5 Star Mart","addr":"40-15 104th St","contact":"718-674-4316","lat":40.74636,"lng":-73.86238,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":28,"name":"Superior Deli & Grill","addr":"103-02 Corona Ave","contact":"929-253-8568","lat":40.741,"lng":-73.8615,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":26,"name":"JAA Deli","addr":"49-06 111th St","contact":"347-242-8677","lat":40.73565,"lng":-73.85478,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":27,"name":"Red Delicious","addr":"48-32 104th St","contact":"947-777-7737","lat":40.73618,"lng":-73.86157,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":23,"name":"Saboor Food Market","addr":"93-34 43rd Ave","contact":"347-569-4213","lat":40.74227,"lng":-73.87237,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":24,"name":"99 Cents & Convenience","addr":"90-26 43rd Ave","contact":"347-506-7965","lat":40.74212,"lng":-73.87525,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":22,"name":"Gorkha Deli","addr":"86-22 Queens Blvd","contact":"347-935-6765","lat":40.7372,"lng":-73.8775,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":21,"name":"Aadhya Deli Grocery","addr":"82-33 Broadway","contact":"929-800-7141","lat":40.7418,"lng":-73.8812,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":8,"name":"USA Mini Market","addr":"48-10 69th St","contact":"347-400-6032","lat":40.73468,"lng":-73.89519,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":9,"name":"Maspeth Delicious Bites","addr":"53-01 65th Pl","contact":"914-447-1424","lat":40.72837,"lng":-73.89806,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":10,"name":"Family Convenience Store","addr":"59-39 Queens Blvd","contact":"347-744-7487","lat":40.7419,"lng":-73.905,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":11,"name":"Woodside Candy","addr":"60-04 Woodside Ave","contact":"347-912-2741","lat":40.7432,"lng":-73.9045,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":12,"name":"Woodside Grocery","addr":"39-71 61st St","contact":"646-675-8196","lat":40.74478,"lng":-73.90371,"kind":"acct"},{"day":"tue","name":"Met Fresh Market Place","addr":"59-15 Roosevelt Ave, Woodside","lat":40.7453,"lng":-73.9048,"kind":"prospect","contact":""},{"day":"tue","sheet":"Jackson Heights","n":1,"name":"Sunnyside Garden","addr":"46-01 Skillman Ave","contact":"","lat":40.7465,"lng":-73.9185,"kind":"acct"},{"day":"tue","name":"Parrot Coffee Market Place","addr":"45-15 Queens Blvd, Sunnyside","lat":40.7431,"lng":-73.9186,"kind":"prospect","contact":""},{"day":"tue","name":"Go Natural Health Foods & Juice Bar","addr":"45-03 Queens Blvd, Sunnyside","lat":40.7432,"lng":-73.9192,"kind":"prospect","contact":""},{"day":"tue","sheet":"Jackson Heights","n":5,"name":"Viraj Candy","addr":"40-03 Queens Blvd","contact":"929-257-4356","lat":40.7437,"lng":-73.924,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":6,"name":"Love Deli","addr":"39-43 48th Ave","contact":"646-577-6623","lat":40.7393,"lng":-73.9238,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":7,"name":"Mobil \u2013 Greenpoint Ave","addr":"35-15 Greenpoint Ave","contact":"718-392-0093","lat":40.7383,"lng":-73.9318,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":4,"name":"BP \u2013 Queens Blvd","addr":"32-28 Queens Blvd","contact":"631-782-8132","lat":40.7448,"lng":-73.931,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":3,"name":"Cafeteria Market Place","addr":"32-02 Queens Blvd","contact":"347-336-7501","lat":40.7451,"lng":-73.9318,"kind":"acct"},{"day":"tue","sheet":"Jackson Heights","n":2,"name":"Mm Petroleum","addr":"39-04 Skillman Ave","contact":"516-439-9254","lat":40.7487,"lng":-73.9258,"kind":"acct"}],"miles":14.9},"wed":{"start":{"lat":40.784,"lng":-73.9445,"name":"FDR Dr @ 96th St"},"stops":[{"day":"wed","sheet":"East Manhattan","n":1,"name":"Lexington Market Place","addr":"1276 Lexington Ave (86th)","contact":"929-464-0589","lat":40.77936,"lng":-73.95419,"kind":"acct"},{"day":"wed","name":"Butterfield Market","addr":"1150 Madison Ave (85th)","lat":40.78027,"lng":-73.95811,"kind":"prospect","contact":"212-758-2800"},{"day":"wed","sheet":"East Manhattan","n":9,"name":"Marche Madison \u2013 Madison Ave","addr":"931 Madison Ave (74th)","contact":"347-355-3540","lat":40.77323,"lng":-73.9637,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":10,"name":"Lex Gourmet (2 racks)","addr":"971 Lexington Ave (70th)","contact":"347-494-2246","lat":40.76944,"lng":-73.96206,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":11,"name":"Mag News","addr":"150 E 68th St","contact":"917-742-8197","lat":40.76756,"lng":-73.96272,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":12,"name":"Elm Deli Cafe","addr":"851 Lexington Ave (64th)","contact":"929-225-0576","lat":40.7656,"lng":-73.96511,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":13,"name":"Smiley's","addr":"802 Lexington Ave (62nd)","contact":"516-350-4234","lat":40.764,"lng":-73.96638,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":14,"name":"Lenox Hill Deli","addr":"1031 Third Ave (61st)","contact":"917-495-1584","lat":40.76284,"lng":-73.9648,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":19,"name":"Good Nature Deli","addr":"1045 Second Ave (55th)","contact":"347-468-4567","lat":40.75766,"lng":-73.96586,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":15,"name":"2nd Ave Corner","addr":"1161 Second Ave (61st)","contact":"347-527-6241","lat":40.7615,"lng":-73.96281,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":16,"name":"The Deli Deli","addr":"1219 First Ave (64th)","contact":"917-770-2904","lat":40.76236,"lng":-73.95895,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":17,"name":"Heavenly Market \u2013 1274 First","addr":"1274 First Ave (66th)","contact":"646-403-7497","lat":40.76396,"lng":-73.95768,"kind":"acct"},{"day":"wed","name":"Grace's Marketplace","addr":"1299 Second Ave (68th)","lat":40.76598,"lng":-73.95926,"kind":"prospect","contact":""},{"day":"wed","sheet":"East Manhattan","n":18,"name":"Fresh Food Farm","addr":"1310 Second Ave (69th)","contact":"212-585-4111","lat":40.76662,"lng":-73.95875,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":5,"name":"Flavors NYC","addr":"1384 First Ave (72nd)","contact":"347-837-2194","lat":40.76748,"lng":-73.95488,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":8,"name":"East Side Grocery","addr":"1422 Second Ave (74th)","contact":"646-436-5232","lat":40.76982,"lng":-73.95621,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":7,"name":"Number 1 Farmers Market","addr":"1458 Second Ave (76th)","contact":"347-494-8351","lat":40.7711,"lng":-73.95519,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":6,"name":"Nada Deli","addr":"1488 First Ave (77th)","contact":"646-322-8635","lat":40.77068,"lng":-73.95234,"kind":"acct"},{"day":"wed","name":"A Matter of Health","addr":"1478 First Ave (77th)","lat":40.77061,"lng":-73.95219,"kind":"prospect","contact":"212-288-8280"},{"day":"wed","sheet":"East Manhattan","n":4,"name":"Fresh Food Corner","addr":"1431 York Ave (75th)","contact":"929-413-2905","lat":40.7687,"lng":-73.95086,"kind":"acct"},{"day":"wed","sheet":"East Manhattan","n":3,"name":"East Side Market","addr":"1463 York Ave (77th)","contact":"347-728-7027","lat":40.76966,"lng":-73.9501,"kind":"acct"},{"day":"wed","name":"Agata & Valentina","addr":"1505 First Ave (79th)","lat":40.77196,"lng":-73.95133,"kind":"prospect","contact":"212-452-0690"},{"day":"wed","sheet":"East Manhattan","n":2,"name":"Garden Basket","addr":"1565 York Ave (82nd)","contact":"917-795-7837","lat":40.77286,"lng":-73.94756,"kind":"acct"}],"miles":5.7},"thu":{"start":{"lat":40.7705,"lng":-73.99,"name":"West Side Hwy @ 57th St"},"stops":[{"day":"thu","name":"Westerly Natural Market","addr":"911 Eighth Ave (54th)","lat":40.76552,"lng":-73.98502,"kind":"prospect","contact":""},{"day":"thu","sheet":"East Manhattan","n":28,"name":"Times Square Cafe","addr":"1657 Broadway (51st)","contact":"551-556-0622","lat":40.76308,"lng":-73.98445,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":27,"name":"Lucky Cheese","addr":"213 W 53rd St","contact":"929-634-5135","lat":40.76395,"lng":-73.98349,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":29,"name":"Gastro Market","addr":"235 W 55th St","contact":"917-714-5353","lat":40.76546,"lng":-73.98298,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":26,"name":"Heaven On 7th Marketplace","addr":"850 Seventh Ave (55th)","contact":"718-678-6843","lat":40.76472,"lng":-73.98135,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":25,"name":"Central Valley Deli","addr":"916 Seventh Ave (57th)","contact":"551-300-4654","lat":40.76632,"lng":-73.98008,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":22,"name":"JIH Market","addr":"115 W 57th St","contact":"646-515-7822","lat":40.76484,"lng":-73.97779,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":23,"name":"Merci Market \u2013 6th Ave","addr":"1413 Sixth Ave (58th)","contact":"646-303-0959","lat":40.7652,"lng":-73.97667,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":24,"name":"Halo Deli","addr":"1428 Sixth Ave (58th)","contact":"917-607-1581","lat":40.76538,"lng":-73.97631,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":21,"name":"Smiler's Deli","addr":"532 Madison Ave (54th)","contact":"347-827-7610","lat":40.76043,"lng":-73.97386,"kind":"acct"},{"day":"thu","sheet":"East Manhattan","n":20,"name":"57 Gourmet Deli","addr":"141 E 57th St","contact":"917-693-8354","lat":40.76089,"lng":-73.96912,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":39,"name":"Organic Natural Convenience","addr":"822 Third Ave (50th)","contact":"929-602-6931","lat":40.7558,"lng":-73.97039,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":38,"name":"Kips Bay Gourmet Deli","addr":"913 Second Ave (49th)","contact":"201-375-7366","lat":40.7535,"lng":-73.96916,"kind":"acct"},{"day":"thu","name":"Dainobu","addr":"129 E 47th St","lat":40.75398,"lng":-73.97308,"kind":"prospect","contact":""},{"day":"thu","sheet":"Midtown Manhattan","n":37,"name":"129 Gourmet Deli","addr":"129 E 45th St","contact":"929-317-5761","lat":40.7527,"lng":-73.9741,"kind":"acct"},{"day":"thu","name":"The Amish Market","addr":"240 E 45th St","lat":40.75177,"lng":-73.97206,"kind":"prospect","contact":""},{"day":"thu","sheet":"Midtown Manhattan","n":36,"name":"Cafe Venice","addr":"596 Third Ave (39th)","contact":"559-212-5701","lat":40.74876,"lng":-73.97598,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":34,"name":"Heavenly Market \u2013 685 First","addr":"685 First Ave (39th)","contact":"347-280-6077","lat":40.74636,"lng":-73.97165,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":33,"name":"Marche Madison \u2013 1st Ave","addr":"630 First Ave (36th)","contact":"","lat":40.74476,"lng":-73.97292,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":32,"name":"Bread and Butter","addr":"401 E 34th St","contact":"347-306-1287","lat":40.74334,"lng":-73.97459,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":7,"name":"Kips Bay Deli","addr":"545 Second Ave (30th)","contact":"201-830-7407","lat":40.7421,"lng":-73.9771,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":35,"name":"NYC Hill Corp.","addr":"235 E 34th St","contact":"914-656-0007","lat":40.74469,"lng":-73.97755,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":6,"name":"Future Village Farm","addr":"425 Third Ave (30th)","contact":"917-530-1674","lat":40.7432,"lng":-73.9803,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":3,"name":"Grace Deli","addr":"180 Lexington Ave (31st)","contact":"347-476-0909","lat":40.7442,"lng":-73.9815,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":4,"name":"Little Michael","addr":"118 Lexington Ave (28th)","contact":"347-476-0909","lat":40.7423,"lng":-73.9829,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":5,"name":"Lex Grill & Juice Bar","addr":"97 Lexington Ave (27th)","contact":"929-407-0019","lat":40.7416,"lng":-73.9836,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":1,"name":"Nom Deli","addr":"1178 Broadway (28th)","contact":"646-258-2691","lat":40.7457,"lng":-73.9886,"kind":"acct"},{"day":"thu","sheet":"Midtown Manhattan","n":2,"name":"Sunac Fancy Food","addr":"765 Sixth Ave (26th)","contact":"347-604-0450","lat":40.7443,"lng":-73.9918,"kind":"acct"}],"miles":6.2},"fri":{"start":{"lat":40.7365,"lng":-73.9745,"name":"FDR Dr @ 23rd St"},"stops":[{"day":"fri","sheet":"Midtown Manhattan","n":31,"name":"Gracefully Market","addr":"400 E 23rd St","contact":"646-398-3772","lat":40.7368,"lng":-73.9781,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":8,"name":"Heavenly Market \u2013 296 3rd","addr":"296 Third Ave (23rd)","contact":"201-290-3922","lat":40.7387,"lng":-73.984,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":9,"name":"5 Senses Deli","addr":"206 Third Ave (18th)","contact":"212-381-1270","lat":40.7363,"lng":-73.9861,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":10,"name":"Ray's Deli (3 small racks)","addr":"201 Second Ave (12th)","contact":"347-691-1776","lat":40.7317,"lng":-73.9866,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":11,"name":"Prince Food Market","addr":"59 Fourth Ave (9th)","contact":"347-975-8239","lat":40.731,"lng":-73.9902,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":15,"name":"Nom ! 74","addr":"74 University Pl (11th)","contact":"201-694-0020","lat":40.7336,"lng":-73.9932,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":14,"name":"Heavenly Market \u2013 8th St","addr":"44 E 8th St","contact":"708-518-8899","lat":40.7307,"lng":-73.9935,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":12,"name":"Broadway Market Place","addr":"689 Broadway (4th)","contact":"917-565-6409","lat":40.7275,"lng":-73.9945,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":13,"name":"Le Basket","addr":"683 Broadway","contact":"212-420-9772","lat":40.7272,"lng":-73.9947,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":17,"name":"Bowerie Iconic Magazine","addr":"215 Bowery","contact":"646-726-6315","lat":40.7219,"lng":-73.993,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":19,"name":"Your Wholesome Grocery Deli","addr":"159 Essex St","contact":"732-428-9689","lat":40.7214,"lng":-73.9868,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":26,"name":"Buenoeast Mart","addr":"36 Avenue A (3rd)","contact":"917-940-0309","lat":40.7235,"lng":-73.9855,"kind":"acct"},{"day":"fri","name":"High Vibe Health Food","addr":"138 E 3rd St","lat":40.7234,"lng":-73.9865,"kind":"prospect","contact":""},{"day":"fri","sheet":"Midtown Manhattan","n":22,"name":"CR7 Gourmet Deli","addr":"26 First Ave (2nd)","contact":"718-350-7140","lat":40.7236,"lng":-73.9878,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":25,"name":"Mayberry Deli","addr":"61 First Ave (4th)","contact":"347-393-3404","lat":40.725,"lng":-73.9866,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":23,"name":"Village Cafe & Grill","addr":"128 E 4th St","contact":"347-551-5607","lat":40.7262,"lng":-73.988,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":16,"name":"Village Gourmet","addr":"102 Second Ave (6th)","contact":"719-650-2514","lat":40.7275,"lng":-73.9894,"kind":"acct"},{"day":"fri","name":"East Village Organic","addr":"124 First Ave (7th)","lat":40.7277,"lng":-73.9848,"kind":"prospect","contact":""},{"day":"fri","sheet":"Midtown Manhattan","n":28,"name":"Sweet Village Marketplace","addr":"147 First Ave (9th)","contact":"929-855-0646","lat":40.729,"lng":-73.9839,"kind":"acct"},{"day":"fri","name":"Commodities Natural Market","addr":"165 First Ave (10th)","lat":40.7296,"lng":-73.9835,"kind":"prospect","contact":""},{"day":"fri","sheet":"Midtown Manhattan","n":29,"name":"Hampton's Fresh Deli","addr":"217 First Ave (13th)","contact":"559-391-7590","lat":40.7313,"lng":-73.9822,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":30,"name":"Stuytown Marketplace","addr":"279 First Ave (16th)","contact":"347-744-3022","lat":40.733,"lng":-73.9808,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":27,"name":"Sheen Brothers","addr":"155 Avenue B (10th)","contact":"929-488-6360","lat":40.7268,"lng":-73.979,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":24,"name":"Chop Cheese Deli \u2013 Ave D","addr":"113 Avenue D (7th)","contact":"917-470-5074","lat":40.7238,"lng":-73.9758,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":20,"name":"210 Rivington Deli","addr":"210 Rivington St","contact":"347-856-7530","lat":40.7183,"lng":-73.9822,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":21,"name":"Prince Grill & Juice Bar","addr":"158 Delancey St","contact":"929-407-0019","lat":40.7187,"lng":-73.9858,"kind":"acct"},{"day":"fri","sheet":"Midtown Manhattan","n":18,"name":"Stop 1 Deli","addr":"201 Madison St","contact":"718-954-1097","lat":40.7132,"lng":-73.9894,"kind":"acct"}],"miles":6.6}};
+const DAYS=[{k:'mon',d:'Mon',t:'Astoria · LIC',date:'11/9'},{k:'tue',d:'Tue',t:'Jackson Hts · Elmhurst · Corona',date:'11/10'},{k:'wed',d:'Wed',t:'Upper East Side',date:'11/11'},{k:'thu',d:'Thu',t:'Midtown W → Murray Hill',date:'11/12'},{k:'fri',d:'Fri',t:'Gramercy · E. Village · LES',date:'11/13'}];
+const HEX={mon:'#e4572e',tue:'#0ea5e9',wed:'#3d5a80',thu:'#8e44ad',fri:'#c48a00'};
+const SC={sold:'var(--sold)',no:'var(--no)',fu:'var(--fu)',skip:'var(--skip)'};
+const SL={sold:'Sold',no:'No sale',fu:'Follow up',skip:'Skipped / closed'};
+const DONE_CHIPS=['Put on shelf','In cooler','Samples left','Sell sheet left','QR tag placed','Got owner cell','Took shelf photo','Placed app order'];
+const NO_CHIPS=['Owner not in','Price too high','No shelf / cooler space','Has competitor','Not interested','Overstocked','Come back later','Store closed'];
+const LAND=[
+ // Manhattan
+ [[40.7003,-74.0150],[40.7090,-74.0180],[40.7250,-74.0120],[40.7400,-74.0100],[40.7550,-74.0060],[40.7700,-73.9950],[40.7850,-73.9850],[40.8000,-73.9720],[40.8200,-73.9600],[40.8400,-73.9480],[40.8600,-73.9330],[40.8750,-73.9250],[40.8780,-73.9150],[40.8700,-73.9110],[40.8500,-73.9280],[40.8300,-73.9350],[40.8120,-73.9330],[40.7950,-73.9290],[40.7850,-73.9410],[40.7760,-73.9425],[40.7600,-73.9580],[40.7480,-73.9680],[40.7380,-73.9718],[40.7270,-73.9728],[40.7180,-73.9755],[40.7100,-73.9780],[40.7080,-73.9990],[40.7010,-74.0110]],
+ // Roosevelt Island
+ [[40.7520,-73.9600],[40.7600,-73.9530],[40.7700,-73.9420],[40.7712,-73.9445],[40.7610,-73.9558],[40.7525,-73.9620]],
+ // Queens / Brooklyn
+ [[40.6800,-74.0200],[40.6900,-73.9990],[40.7030,-73.9900],[40.7050,-73.9700],[40.7150,-73.9620],[40.7280,-73.9585],[40.7370,-73.9620],[40.7420,-73.9612],[40.7490,-73.9555],[40.7560,-73.9480],[40.7630,-73.9420],[40.7710,-73.9370],[40.7770,-73.9320],[40.7810,-73.9250],[40.7850,-73.9170],[40.7830,-73.9050],[40.7800,-73.8930],[40.7760,-73.8830],[40.7770,-73.8700],[40.7700,-73.8550],[40.7600,-73.8450],[40.6800,-73.8300]]
+];
+const ROADS=[
+ // Manhattan
+ {n:'Broadway',p:[[40.7180,-74.0030],[40.7359,-73.9906],[40.7411,-73.9897],[40.7580,-73.9855],[40.7681,-73.9819]]},
+ {n:'Houston St',p:[[40.7283,-74.0020],[40.7200,-73.9770]]},
+ {n:'Delancey St',p:[[40.7202,-73.9935],[40.7160,-73.9800]]},
+ {n:'Bowery',p:[[40.7150,-73.9960],[40.7287,-73.9910]]},
+ {n:'14th St',p:[[40.7408,-74.0055],[40.7300,-73.9748]]},
+ {n:'Queens Blvd',q:1,p:[[40.7505,-73.9400],[40.7447,-73.9310],[40.7432,-73.9185],[40.7419,-73.9050],[40.7395,-73.8955],[40.7366,-73.8775],[40.7300,-73.8650]]},
+ {n:'Northern Blvd',q:1,p:[[40.7500,-73.9370],[40.7524,-73.9310],[40.7530,-73.9110],[40.7547,-73.8965],[40.7556,-73.8792],[40.7575,-73.8650]]},
+ {n:'Roosevelt Ave',q:1,p:[[40.7433,-73.9150],[40.7456,-73.9030],[40.7466,-73.8913],[40.7484,-73.8762],[40.7517,-73.8555]]},
+ {n:'31st St',q:1,p:[[40.7770,-73.9100],[40.7752,-73.9120],[40.7666,-73.9215],[40.7567,-73.9296],[40.7534,-73.9323]]},
+ {n:'Broadway',q:1,p:[[40.7685,-73.9370],[40.7616,-73.9255],[40.7566,-73.9138],[40.7530,-73.9060]]},
+ {n:'Astoria Blvd / GCP',q:1,p:[[40.7710,-73.9230],[40.7655,-73.9076],[40.7633,-73.8990],[40.7613,-73.8810],[40.7640,-73.8650]]},
+ {n:'Vernon Blvd',q:1,p:[[40.7660,-73.9360],[40.7550,-73.9460],[40.7450,-73.9530],[40.7400,-73.9550]]},
+ {n:'37th Ave',q:1,p:[[40.7486,-73.9060],[40.7488,-73.8915],[40.7503,-73.8627]]},
+ {n:'Ditmars Blvd',q:1,p:[[40.7800,-73.9230],[40.7752,-73.9120],[40.7710,-73.9040]]},
+ {n:'Junction Blvd',q:1,p:[[40.7580,-73.8710],[40.7380,-73.8700]]},
+];
+(function addGrid(){ // Manhattan avenues/streets from the same grid model used for geocoding
+  const AVE={'York':1350,'1st':1130,'2nd':900,'3rd':680,'Lex':500,'Park':330,'Madison':165,'5th':0,'6th':-310,'7th':-620,'8th':-930,'9th':-1240,'10th':-1550};
+  const m=(off,st)=>[40.7644-(59-st)*0.00064+off*(-4.64e-6), -73.9730-(59-st)*0.000508+off*1.019e-5];
+  const lbl={'1st':'1st Ave','2nd':'2nd Ave','3rd':'3rd Ave','Lex':'Lexington','Park':'Park Ave','Madison':'Madison','5th':'5th Ave','6th':'6th Ave','7th':'7th Ave','8th':'8th Ave','York':'York Ave','9th':'9th Ave','10th':'10th Ave'};
+  for(const a in AVE){const lo=a==='York'?59:(a==='Lex'?24:24); ROADS.push({n:lbl[a],ave:1,p:[m(AVE[a],lo),m(AVE[a],96)]});}
+  for(const s of [34,42,57,72,79,86,96]) ROADS.push({n:s+'th St',p:[m(-1550,s),m(s>=60?1350:1130,s)],x:1});
+  // Broadway above 23rd follows the grid: 5th@23 → 6th@34 → 7th@45 → 8th@59
+  ROADS[0].p=[[40.7180,-74.0030],[40.7359,-73.9906],m(0,23),m(-310,34),m(-620,45),m(-930,59),m(-1240,72)];
+  // downtown avenues (grid bends below 23rd)
+  [['1st Ave',[[40.7228,-73.9884],[40.7368,-73.9781],m(1130,24)]],['2nd Ave',[[40.7238,-73.9915],[40.7329,-73.9857],[40.7383,-73.9818],m(900,24)]],
+   ['3rd Ave',[[40.7290,-73.9907],[40.7387,-73.9840],m(680,24)]],['Ave A',[[40.7223,-73.9864],[40.7300,-73.9810]]],['Ave B',[[40.7212,-73.9837],[40.7290,-73.9783]]],
+   ['Ave D',[[40.7185,-73.9790],[40.7270,-73.9730]]],['23rd St',[[40.7445,-74.0010],[40.7360,-73.9760]]]].forEach(([n,p])=>ROADS.push({n,p,ave:1}));
+})();
+const HOODS=[
+ ['Astoria',40.7700,-73.9200],['Ditmars',40.7790,-73.9100],['LIC',40.7450,-73.9420],['Ravenswood',40.7590,-73.9420],['Sunnyside',40.7405,-73.9220],['Woodside',40.7470,-73.9040],['Jackson Hts',40.7520,-73.8850],['Elmhurst',40.7380,-73.8790],['Corona',40.7440,-73.8580],['E. Elmhurst',40.7640,-73.8770],['Maspeth',40.7270,-73.9000],
+ ['Upper East Side',40.7720,-73.9580],['Yorkville',40.7780,-73.9490],['Midtown',40.7580,-73.9820],["Hell's Kitchen",40.7640,-73.9920],['Turtle Bay',40.7530,-73.9680],['Murray Hill',40.7480,-73.9780],['Kips Bay',40.7410,-73.9760],['NoMad',40.7460,-73.9890],['Gramercy',40.7370,-73.9830],['East Village',40.7270,-73.9840],['Alphabet City',40.7250,-73.9790],['LES',40.7170,-73.9860],['Greenwich Village',40.7310,-73.9990],['Central Park',40.7750,-73.9680],['East River',40.7560,-73.9580]
+];
+
+
+function project(pts,W){
+  let la0=Infinity,la1=-Infinity,ln0=Infinity,ln1=-Infinity;
+  pts.forEach(([a,b])=>{la0=Math.min(la0,a);la1=Math.max(la1,a);ln0=Math.min(ln0,b);ln1=Math.max(ln1,b)});
+  const k=Math.cos(40.75*Math.PI/180);
+  let w=(ln1-ln0)*k, h=(la1-la0);
+  const pad=Math.max(w,h)*0.09; la0-=pad;la1+=pad;ln0-=pad/k;ln1+=pad/k; w=(ln1-ln0)*k; h=la1-la0;
+  // keep aspect between 0.7 and 1.35
+  const minAR=0.75,maxAR=1.3; let ar=h/w;
+  if(ar<minAR){const ex=(minAR*w-h)/2;la0-=ex;la1+=ex;h=la1-la0}
+  if(ar>maxAR){const ex=(h/maxAR-w)/2/k;ln0-=ex;ln1+=ex;w=(ln1-ln0)*k}
+  const H=Math.round(W*h/w), s=W/w;
+  return {W,H,s,f:([a,b])=>[((b-ln0)*k*s),((la1-a)*s)]};
+}
+
+/* IV-X Field app v2 — main script. PLAN, DAYS, geography and helpers are injected above. */
+
+// ===================== storage =====================
+const LS={get(k,d){try{const v=localStorage.getItem('ivx_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('ivx_'+k,JSON.stringify(v))}catch(e){}}};
+const IDB=(()=>{let dbp=null;const open=()=>dbp||(dbp=new Promise((res,rej)=>{const r=indexedDB.open('ivx_field',1);r.onupgradeneeded=()=>r.result.createObjectStore('blobs',{keyPath:'pid'});r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(mode,fn)=>{const db=await open();return new Promise((res,rej)=>{const t=db.transaction('blobs',mode);const s=t.objectStore('blobs');const q=fn(s);t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})};
+  return{put:o=>tx('readwrite',s=>s.put(o)),get:pid=>tx('readonly',s=>s.get(pid)),del:pid=>tx('readwrite',s=>s.delete(pid)),all:()=>tx('readonly',s=>s.getAll())}})();
+
+// ===================== setup link =====================
+(function(){const h=location.hash.slice(1);if(!h)return;const p=new URLSearchParams(h);let hit=false;
+  [['name','name'],['mapkey','mapsKey']].forEach(([a,b])=>{if(p.get(a)){LS.set(b,p.get(a));hit=true}});
+  if(hit)history.replaceState(null,'',location.pathname+location.search)})();
+
+// ===================== state =====================
+let recs=LS.get('recs',{}), outbox=LS.get('outbox',[]), serverLog=LS.get('log',[]), scans=LS.get('scans',{});
+let config=LS.get('config',null)||defaultConfig(), configDirty=LS.get('configDirty',false);
+let day=LS.get('day',null)||({1:'mon',2:'tue',3:'wed',4:'thu',5:'fri'})[new Date().getDay()]||'mon';
+let filter='todo', tab='route', mapOn=false, scope='day', dueSort='date', here=null;
+const CFG=window.IVX_CONFIG||{};
+const SB_URL=String(CFG.SUPABASE_URL||'').trim().replace(/\/$/,''),SB_KEY=String(CFG.SUPABASE_KEY||'').trim();
+const sb=(window.supabase&&SB_URL&&SB_KEY)?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'ivx_sb_auth'}}):null;
+let session=null;
+const syncUrl=()=>sb&&session?SB_URL:'';   // truthy when cloud sync is live
+const myName=()=>LS.get('name','');
+const mapsKey=()=>(LS.get('mapsKey','')||CFG.MAPS_KEY||'').trim();
+function persist(){LS.set('recs',recs);LS.set('outbox',outbox)}
+function defaultConfig(){return{
+  products:[],
+  pitch:{sellSheetUrl:'',points:[
+    'Made in NYC by the team behind Iron Vault gym.',
+    '[What it is in one line — e.g. energy + hydration, key ingredients, calories, sugar]',
+    '[Who buys it — gym-goers, students, office workers, construction crews]',
+    'Store margin: see the price sheet above — you make about {margin} on every can at the suggested price.',
+    'Low-risk start: one case to test. [Say what you offer if it doesn\'t move — swap flavors, restock visit, etc.]',
+    'We\'re pushing it on TikTok — shoppers will come in asking for it. [Mention follower count / recent views]'],
+   objections:{
+    'Price too high':'Walk the margin: they pay {unitCost} a can, it sells at {srp} — that\'s {margin} per can. Offer to start with one case so it\'s a small bet.',
+    'No shelf / cooler space':'Ask for just one facing next to the energy drinks, or one cooler slot for two weeks. If it doesn\'t sell, you\'ll swap it out.',
+    'Has competitor':'Position as the healthier / local option next to the big brands — different shopper, not a replacement. Leave samples so they can taste the difference.',
+    'Not interested':'Leave a sample and sell sheet, get the owner\'s name and best time to come back. Ask what does sell well in their cooler.',
+    'Owner not in':'Get the owner\'s name, cell and when they\'re in. Leave a sample and sell sheet with the counter person. Set a follow-up date.',
+    'Overstocked':'Set a follow-up for 2–3 weeks. Leave a sample so it\'s top of mind when they reorder.',
+    'Come back later':'Pin down a day and time and set the follow-up date before you leave.',
+    'Store closed':'Mark it, move on — it stays on the follow-up list.'}},
+  settings:{qrUrl:'',reorderDays:14,followUpDays:3,reportEmail:'',reportHour:19}}}
+const P=()=>config.products||[];
+const S=()=>Object.assign({reorderDays:14,followUpDays:3},config.settings||{});
+
+// ===================== ids, directory =====================
+const SHEETCODE={'Astoria':'A','Jackson Heights':'J','East Manhattan':'E','Midtown Manhattan':'M'};
+const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);
+const storeKeyOf=(name,addr)=>slug(name)+'_'+((String(addr||'').match(/[\d-]+/)||[''])[0].replace(/-/g,''));
+DAYS.forEach(D=>PLAN[D.k].stops.forEach(s=>{s.id=s.kind==='acct'?`${D.k}_${SHEETCODE[s.sheet]}${s.n}`:`${D.k}_p_${slug(s.name)}`;s.storeKey=storeKeyOf(s.name,s.addr);s.day=D.k}));
+const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+const ymd=d=>{d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const addDays=(n,d)=>{const x=d?new Date(d+'T12:00:00'):new Date();x.setDate(x.getDate()+Number(n||0));return ymd(x)};
+const money=n=>'$'+(Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+const live=id=>{const r=recs[id];return r&&!r.deleted?r:null};
+function walkins(k){return Object.values(recs).filter(r=>r.kind==='walk'&&!r.deleted&&r.day===k).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))}
+function stopsFor(k){
+  const base=PLAN[k].stops.map((s,i)=>({...s,seq:i+1}));
+  return base.concat(walkins(k).map((w,j)=>({id:w.id,kind:'walk',name:w.store,addr:w.address||'',contact:w.phone||'',seq:base.length+j+1,storeKey:w.storeKey||storeKeyOf(w.store,w.address),lat:w.lat?+w.lat:null,lng:w.lng?+w.lng:null,day:k})));
+}
+function directory(){ // storeKey -> store info
+  const d={};
+  DAYS.forEach(D=>stopsFor(D.k).forEach(s=>{if(!d[s.storeKey])d[s.storeKey]={storeKey:s.storeKey,name:s.name,addr:s.addr,phone:s.contact||'',lat:s.lat,lng:s.lng,day:D.k,kind:s.kind,stopId:s.id}}));
+  allEvents().forEach(e=>{if(e.storeKey&&!d[e.storeKey])d[e.storeKey]={storeKey:e.storeKey,name:e.store,addr:e.address,phone:e.phone,day:e.day,kind:e.kind}});
+  return d;
+}
+const statusOf=s=>{const r=live(s.id);return r&&r.status?r:null};
+
+// ===================== history / stages / due =====================
+function parseRow(r){const o={};for(const k in r){o[k]=r[k]===''?undefined:r[k]}
+  ['reasons','alsoDone','photos'].forEach(k=>o[k]=Array.isArray(o[k])?o[k]:(o[k]?String(o[k]).split(' | ').filter(Boolean):[]));
+  if(!Array.isArray(o.items)){try{o.items=o.items?JSON.parse(o.items):[]}catch(e){o.items=[]}}
+  ['cases','freeCans','freeCases'].forEach(k=>o[k]=o[k]?+o[k]:0);
+  o.deleted=String(o.deleted).toUpperCase()==='TRUE'; o.id=String(o.id);
+  if(!o.storeKey&&o.store)o.storeKey=storeKeyOf(o.store,o.address); return o}
+function allEvents(){ // server log + this phone's unsynced saves
+  const seen=new Set(), out=[];
+  serverLog.forEach(e=>{const k=e.id+'@'+e.at;if(!seen.has(k)){seen.add(k);out.push(e)}});
+  outbox.forEach(id=>{const r=recs[id];if(r&&r.at){const k=r.id+'@'+r.at;if(!seen.has(k)){seen.add(k);out.push(r)}}});
+  Object.values(recs).forEach(r=>{if(r.at){const k=r.id+'@'+r.at;if(!seen.has(k)){seen.add(k);out.push(r)}}});
+  return out;
+}
+function storeTimeline(key){ // latest save per record id, newest first
+  const latest={};
+  allEvents().forEach(e=>{if(e.storeKey!==key)return;if(!latest[e.id]||String(latest[e.id].at)<String(e.at))latest[e.id]=e});
+  return Object.values(latest).filter(e=>!e.deleted&&e.status).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+}
+const STAGES=['Prospect','Pitched','Sampled','First order','Reorder','Regular','Lost'];
+const STAGE_COL={Prospect:'#a8a29e',Pitched:'#64748b',Sampled:'#0ea5e9','First order':'#16a34a',Reorder:'#15803d',Regular:'#065f46',Lost:'#dc2626'};
+function stageOf(key,tl){tl=tl||storeTimeline(key);if(!tl.length)return'Prospect';
+  const sold=tl.filter(e=>e.status==='sold').length;
+  if(sold>=3)return'Regular';if(sold===2)return'Reorder';if(sold===1)return'First order';
+  if(tl[0].status==='no'&&(tl[0].reasons||[]).includes('Not interested'))return'Lost';
+  if(tl.some(e=>e.freeCans||e.freeCases||(e.alsoDone||[]).includes('Samples left')))return'Sampled';
+  return'Pitched'}
+function dueList(){
+  const dir=directory(), out=[];
+  Object.keys(dir).forEach(key=>{const tl=storeTimeline(key);if(!tl.length)return;const last=tl[0];
+    if(!last.followUpDate||last.status==='skip'&&!last.followUpDate)return;
+    out.push({...dir[key],due:last.followUpDate,last,stage:stageOf(key,tl),why:last.status==='sold'?'Reorder check':last.status==='fu'?'Follow up':last.status==='no'?'Try again':'Revisit'})});
+  return out;
+}
+
+// ===================== sync (Supabase) =====================
+let syncing=false,lastOk=0,lastErr='',rtChan=null,rtTimer=null,rtLive=false;
+function setSync(cls,txt){const e=$('#sync');e.className='sync '+cls;e.querySelector('span').textContent=txt}
+function syncLabel(){
+  if(!sb){setSync('warn','Phone only');return}
+  if(!session){setSync('warn','Signed out');return}
+  const n=outbox.length+(configDirty?1:0);
+  if(n){setSync('warn',navigator.onLine?`${n} to upload`:`Offline · ${n} queued`);return}
+  if(lastErr){setSync('bad','Sync error');return}
+  setSync(lastOk?'ok':'warn',lastOk?(rtLive?'Live':'Synced'):'Connecting…');
+}
+async function q(p){const {data,error}=await p;if(error)throw new Error(error.message||String(error));return data}
+function toRow(r){const o={...r};delete o._dirtyAfter;return o}
+async function uploadMedia(r){ // turn local:pid tokens into sb:path. returns false if something is still waiting
+  let ok=true;
+  const one=async tok=>{if(!String(tok).startsWith('local:'))return tok;const pid=tok.slice(6);const b=await IDB.get(pid).catch(()=>null);if(!b)return null;
+    try{const blob=await (await fetch(b.dataUrl)).blob();const path=(b.name.match(/_(\d{4}-\d{2}-\d{2})_/)||[0,ymd()])[1]+'/'+b.name;
+      const {error}=await sb.storage.from('photos').upload(path,blob,{contentType:b.mime,upsert:true});if(error)throw error;await IDB.del(pid);return'sb:'+path}catch(e){ok=false;return tok}};
+  if(r.photos&&r.photos.some(t=>String(t).startsWith('local:'))){const np=[];for(const t of r.photos){const v=await one(t);if(v)np.push(v)}r.photos=np}
+  if(r.signature&&String(r.signature).startsWith('local:'))r.signature=(await one(r.signature))||'';
+  return ok;
+}
+async function syncNow(quiet){
+  if(syncing||!sb||!session){syncLabel();return}syncing=true;if(!quiet)setSync('warn','Syncing…');
+  try{
+    if(configDirty){await q(sb.from('app_config').upsert(['products','pitch','settings'].filter(k=>config[k]!=null).map(k=>({key:k,value:config[k],updated_at:new Date().toISOString()}))));configDirty=false;LS.set('configDirty',false)}
+    if(outbox.length){
+      const ids=[...outbox],rows=[];
+      for(const id of ids){const r=recs[id];if(!r)continue;const ok=await uploadMedia(r);persist();if(ok)rows.push(toRow(r));}
+      if(rows.length){await q(sb.rpc('save_checkins',{rows}));const sent=new Set(rows.map(r=>r.id));
+        outbox=outbox.filter(id=>!sent.has(id)||(recs[id]&&recs[id]._dirtyAfter));ids.forEach(id=>{if(recs[id])delete recs[id]._dirtyAfter});persist()}
+    }
+    const [rows,log,cfg,sc]=await Promise.all([
+      q(sb.from('checkins').select('data')),
+      q(sb.from('visits_log').select('data').order('at',{ascending:true}).limit(10000)),
+      q(sb.from('app_config').select('key,value')),
+      q(sb.from('qr_scans').select('store_key').limit(20000))]);
+    (rows||[]).forEach(x=>{const r=parseRow(x.data||{});if(!r.id||outbox.includes(r.id))return;const mine=recs[r.id];if(!mine||String(r.at||'')>=String(mine.at||''))recs[r.id]=r});
+    serverLog=(log||[]).map(x=>parseRow(x.data||{}));LS.set('log',serverLog);
+    scans={};(sc||[]).forEach(x=>scans[x.store_key]=(scans[x.store_key]||0)+1);LS.set('scans',scans);
+    if(cfg&&cfg.length&&!configDirty){const m={};cfg.forEach(x=>m[x.key]=x.value);const c=defaultConfig();config={products:m.products||c.products,pitch:m.pitch||c.pitch,settings:Object.assign(c.settings,m.settings||{})};LS.set('config',config)}
+    persist();lastOk=Date.now();lastErr='';$('#banner').classList.remove('on');
+  }catch(e){lastErr=String(e.message||e);if(/JWT|token|auth/i.test(lastErr)){banner('Your sign-in expired — sign in again in Settings.')}else if(!quiet)banner('Couldn\'t reach the server. Check-ins are safe on this phone and will upload automatically. ('+lastErr+')')}
+  finally{syncing=false;syncLabel();render()}
+}
+function startRealtime(){if(!sb||rtChan)return;
+  rtChan=sb.channel('checkins-live').on('postgres_changes',{event:'*',schema:'public',table:'checkins'},()=>{clearTimeout(rtTimer);rtTimer=setTimeout(()=>syncNow(true),1200)})
+    .subscribe(st=>{rtLive=st==='SUBSCRIBED';syncLabel()})}
+function stopRealtime(){if(rtChan){try{sb.removeChannel(rtChan)}catch(e){}rtChan=null;rtLive=false}}
+function saveRec(r,msg){
+  r.at=new Date().toISOString();r.by=myName()||'';if(!r.storeKey)r.storeKey=storeKeyOf(r.store,r.address);
+  if(syncing&&outbox.includes(r.id))r._dirtyAfter=true;
+  recs[r.id]=r;if(!outbox.includes(r.id))outbox.push(r.id);persist();render();
+  toast(msg||(syncUrl()?(navigator.onLine?'Saved':'Saved — will upload when online'):'Saved on this phone'));
+  syncNow(true);
+}
+function saveConfig(){LS.set('config',config);configDirty=true;LS.set('configDirty',true);toast(syncUrl()?'Saved for the whole team':'Saved on this phone');syncNow(true);render()}
+window.addEventListener('online',()=>syncNow(true));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncNow(true)});
+setInterval(()=>{if(!document.hidden)syncNow(true)},60000);
+function banner(t){const b=$('#banner');b.textContent=t;b.classList.add('on')}
+
+// ----- sign-in -----
+function showLogin(msg){
+  let el=$('#login');if(!el){el=document.createElement('div');el.id='login';document.body.appendChild(el)}
+  el.className='login on';
+  el.innerHTML=`<div class="lbox"><h1>IV-X <span>Field</span></h1><p>Sign in with the email and password your manager set up for you.</p>
+   <input id="le" type="email" autocomplete="username" placeholder="Email" value="${esc(LS.get('lastEmail',''))}"><input id="lp" type="password" autocomplete="current-password" placeholder="Password">
+   <button class="save" id="lgo">Sign in</button><div class="lmsg" id="lmsg">${esc(msg||'')}</div>
+   ${Object.keys(recs).length?'':'<button class="clear" style="color:#9aa" id="lskip">Not now — use on this phone only</button>'}</div>`;
+  const go=async()=>{const email=$('#le').value.trim(),password=$('#lp').value;if(!email||!password){$('#lmsg').textContent='Enter your email and password.';return}
+    $('#lgo').disabled=true;$('#lmsg').textContent='Signing in…';
+    try{const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;session=data.session;LS.set('lastEmail',email);
+      if(!myName())LS.set('name',email.split('@')[0].replace(/[._-]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()));
+      el.classList.remove('on');Object.keys(recs).forEach(id=>{if(!outbox.includes(id))outbox.push(id)});persist();startRealtime();await syncNow();toast('Signed in as '+email)}
+    catch(e){$('#lgo').disabled=false;$('#lmsg').textContent=/invalid/i.test(e.message||'')?'Wrong email or password.':(navigator.onLine?'Couldn\'t sign in: '+(e.message||e):'You\'re offline — connect to sign in.')}};
+  $('#lgo').onclick=go;$('#lp').onkeydown=e=>{if(e.key==='Enter')go()};
+  if($('#lskip'))$('#lskip').onclick=()=>{el.classList.remove('on');LS.set('skipLogin',true)};
+}
+async function boot(){
+  if(!sb){syncLabel();return}
+  try{session=(await sb.auth.getSession()).data.session}catch(e){session=null}
+  sb.auth.onAuthStateChange((ev,s)=>{session=s;if(ev==='SIGNED_OUT'){stopRealtime()}syncLabel()});
+  if(session){startRealtime();syncNow()}else if(!LS.get('skipLogin',false))showLogin();
+  syncLabel();
+}
+
+// ===================== media helpers =====================
+const thumbCache={};
+function mediaSrc(tok){tok=String(tok||'');
+  if(tok.startsWith('sb:'))return SB_URL+'/storage/v1/object/public/photos/'+tok.slice(3).split('/').map(encodeURIComponent).join('/');
+  if(tok.startsWith('drive:'))return'https://drive.google.com/thumbnail?id='+tok.slice(6)+'&sz=w600';
+  if(tok.startsWith('local:')){const pid=tok.slice(6);if(thumbCache[pid])return thumbCache[pid];
+    IDB.get(pid).then(b=>{if(b){thumbCache[pid]=b.dataUrl;document.querySelectorAll(`img[data-pid="${pid}"]`).forEach(i=>i.src=b.dataUrl)}}).catch(()=>{});return''}
+  return tok}
+const mediaOpen=tok=>String(tok).startsWith('sb:')?mediaSrc(tok):String(tok).startsWith('drive:')?'https://drive.google.com/file/d/'+String(tok).slice(6)+'/view':null;
+function imgTag(tok,cls){const pid=String(tok).startsWith('local:')?String(tok).slice(6):'';const src=mediaSrc(tok);const href=mediaOpen(tok);
+  const im=`<img class="${cls||'thumb'}" ${pid?`data-pid="${pid}"`:''} src="${esc(src)}" alt="photo" loading="lazy">`;
+  return href?`<a href="${href}" target="_blank" rel="noopener" data-stop>${im}</a>`:im}
+function resizeImage(file,max){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
+  const sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.72))};im.onerror=rej;im.src=fr.result};fr.onerror=rej;fr.readAsDataURL(file)})}
+async function stashMedia(dataUrl,recName,kind){const pid=kind[0]+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const mime=dataUrl.slice(5,dataUrl.indexOf(';'));
+  await IDB.put({pid,dataUrl,mime,name:`${slug(recName)}_${ymd()}_${pid}.${mime.includes('png')?'png':'jpg'}`,desc:`${recName} — ${kind} — ${new Date().toLocaleString()}`});
+  thumbCache[pid]=dataUrl;return'local:'+pid}
+
+// ===================== product math =====================
+const unitCost=p=>p.casePrice&&p.unitsPerCase?p.casePrice/p.unitsPerCase:null;
+const marginOf=p=>{const u=unitCost(p);return u!=null&&p.srp?{per:p.srp-u,pct:(p.srp-u)/p.srp}:null};
+function avgUnitCost(){const xs=P().map(unitCost).filter(x=>x!=null);return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null}
+function avgCase(){const xs=P().map(p=>+p.casePrice).filter(Boolean);return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null}
+function fillTokens(t){const p=P().find(x=>marginOf(x))||P()[0]||{};const m=marginOf(p);const u=unitCost(p);
+  return String(t).replace(/\{margin\}/g,m?money(m.per)+' ('+Math.round(m.pct*100)+'%)':'[set prices in Settings]').replace(/\{unitCost\}/g,u!=null?money(u):'[cost per can]').replace(/\{srp\}/g,p.srp?money(p.srp):'[shelf price]')}
+
+// ===================== render: shell =====================
+function render(){renderDays();renderTabBadges();
+  if(tab==='route')renderRoute();else if(tab==='due')renderDue();else if(tab==='pitch')renderPitch();else if(tab==='sum')renderSum();else renderSet();syncLabel()}
+function dayStats(k){const st=stopsFor(k);let c={sold:0,no:0,fu:0,skip:0,todo:0,cases:0,paid:0,orders:0,cost:0};
+  st.forEach(s=>{const v=statusOf(s);if(!v)c.todo++;else{c[v.status]=(c[v.status]||0)+1;c.cases+=+v.cases||0;c.paid+=parseFloat(v.paid)||0;c.orders+=parseFloat(v.orderTotal)||0;c.cost+=parseFloat(v.sampleCost)||0}});c.total=st.length;c.done=c.total-c.todo;return c}
+function renderDays(){
+  const show=tab==='route'||tab==='sum';$('#days').style.display=show?'flex':'none';
+  $('#days').innerHTML=DAYS.map(D=>{const c=dayStats(D.k);return `<button data-k="${D.k}" class="${D.k===day?'on':''}">${D.d}<small>${c.done}/${c.total}</small><span class="bar" style="width:${(c.done/c.total*100).toFixed(0)}%;background:${HEX[D.k]}"></span></button>`}).join('');
+  $('#days').querySelectorAll('button').forEach(b=>b.onclick=()=>{day=b.dataset.k;LS.set('day',day);render();window.scrollTo(0,0)});
+}
+function renderTabBadges(){const t=ymd();const n=dueList().filter(d=>d.due<=t).length;const b=document.querySelector('.tabs button[data-t=due] .ic');if(b)b.innerHTML='🔁'+(n?`<em class="bdg">${n}</em>`:'')}
+const icon=st=>st==='sold'?'✓':st==='no'?'✕':st==='fu'?'↻':'–';
+const fullAddr=(s,k)=>{const a=(s.addr||'').replace(/\s*\(.*?\)/g,'').trim();const city=(['mon','tue'].includes(k)?'Queens, NY':'New York, NY');if(!a)return s.name+', '+city;
+  if(/ny\b|queens|astoria|long island city|new york|brooklyn|bronx/i.test(a))return(s.kind!=='acct'?s.name+', ':'')+a;return(s.kind!=='acct'?s.name+', ':'')+a+', '+city};
+const navLink=(s,k)=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(s.lat&&s.kind==='walk'&&!s.addr?s.lat+','+s.lng:fullAddr(s,k));
+
+// ===================== render: route =====================
+function renderRoute(){
+  const c=dayStats(day),D=DAYS.find(x=>x.k===day);
+  $('#pbar').innerHTML=['sold','fu','no','skip'].map(s=>`<span style="width:${c[s]/c.total*100}%;background:${SC[s]}"></span>`).join('');
+  $('#pnums').innerHTML=`<div><b>${c.done}/${c.total}</b>visited</div><div><b style="color:var(--sold)">${c.sold}</b>sold</div><div><b>${c.cases}</b>cases</div><div><b style="color:var(--no)">${c.no}</b>no sale</div><div><b style="color:var(--fu)">${c.fu}</b>follow up</div>`;
+  drawMap();renderGCard();
+  const st=stopsFor(day).filter(s=>{const v=statusOf(s);return filter==='all'||(filter==='todo'?!v:!!v)});
+  let o=`<div class="empty" style="padding:6px 0 0;text-align:left;font-size:13px"><b style="color:${HEX[day]}">${D.d} ${D.date}</b> · ${esc(D.t)}</div>`;
+  if(!st.length)o+=`<div class="empty">${filter==='todo'?'🎉 Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
+  st.forEach(s=>{
+    const v=statusOf(s),stg=stageOf(s.storeKey);
+    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+
+      (stg!=='Prospect'?`<span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>`:'')+(scans[s.storeKey]?`<span class="chip c-order">📱 ${scans[s.storeKey]} QR scans</span>`:'');
+    const ph=(s.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);
+    const numStyle=v?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:(s.kind==='acct'?`background:${HEX[day]}`:s.kind==='walk'?'background:#4f46e5':'');
+    const pics=v&&v.photos&&v.photos.length?`<div class="thumbs">${v.photos.slice(0,4).map(t=>imgTag(t)).join('')}</div>`:'';
+    o+=`<div class="st ${s.kind==='prospect'?'pro':''}" data-id="${esc(s.id)}">
+      <div class="num" style="${numStyle}">${v?icon(v.status):s.seq}</div>
+      <div><h3>${esc(s.name)}</h3><div class="addr">${esc(s.addr)}${s.contact?' · '+esc(s.contact):''}</div>
+      ${chips?`<div class="chips">${chips}</div>`:''}${v?resLine(v):''}${pics}
+      <div class="acts"><a href="${navLink(s,day)}" target="_blank" rel="noopener" data-stop>Navigate</a>${ph?`<a href="tel:${ph[0].replace(/-/g,'')}" data-stop>Call</a>`:''}<a href="#" data-open>${v?'Edit':'Check in'}</a></div>
+      </div></div>`;
+  });
+  $('#list').innerHTML=o;
+  $('#list').querySelectorAll('.st').forEach(el=>el.onclick=e=>{if(e.target.closest('[data-stop]'))return;e.preventDefault();openStop(el.dataset.id)});
+}
+function resLine(v){
+  const b=[];if(v.status==='sold'&&v.cases)b.push(`<b>${v.cases} cs</b>`);if(v.orderTotal)b.push(money(v.orderTotal));if(v.bought)b.push(esc(v.bought));
+  if((v.reasons||[]).length)b.push(esc(v.reasons.join(', ')));if((v.alsoDone||[]).length)b.push(esc(v.alsoDone.join(', ')));
+  if(v.freeCans||v.freeCases)b.push(`🎁 ${v.freeCases?v.freeCases+' free cs ':''}${v.freeCans?v.freeCans+' cans':''}`);
+  if(v.paid)b.push(`💵 ${money(v.paid)}`);if(v.signature)b.push('✍️ signed');if(v.followUpDate)b.push(`📅 ${v.status==='sold'?'reorder':'follow up'} ${fmtDate(v.followUpDate)}`);if(v.notes)b.push('“'+esc(v.notes)+'”');
+  const t=v.at?new Date(v.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';const pend=outbox.includes(v.id)?' · ⏳ not uploaded yet':'';
+  return `<div class="res"><b class="s-${v.status}">${SL[v.status]}</b>${b.length?' — '+b.join(' · '):''}<div style="color:var(--mute);font-size:11.5px;margin-top:2px">${v.by?esc(v.by)+' · ':''}${t}${pend}</div></div>`;
+}
+const fmtDate=d=>{if(!d)return'';const x=new Date(d+'T12:00:00');return x.toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})};
+
+// ----- Google Maps: legs card, live map -----
+const LEG=4;
+function legLink(stops,k){const enc=encodeURIComponent;const a=s=>s.lat&&s.kind==='walk'&&!s.addr?s.lat+','+s.lng:fullAddr(s,k||s.day||day);const dest=stops[stops.length-1],wps=stops.slice(0,-1);
+  return'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+enc(a(dest))+(wps.length?'&waypoints='+wps.map(s=>enc(a(s))).join('%7C'):'')}
+function renderGCard(){
+  const todo=stopsFor(day).filter(s=>!statusOf(s));
+  let o=`<div class="gcard">`;
+  if(todo.length){const next=todo.slice(0,LEG),legs=Math.ceil(todo.length/LEG);
+    o+=`<div class="gt"><h4>🧭 Drive the next ${next.length} stop${next.length>1?'s':''}</h4><span style="font-size:12px;color:var(--mute)">${todo.length} left · ${legs} leg${legs>1?'s':''}</span></div>
+   <div class="gl">${next.map(s=>`<b>${s.seq}</b> ${esc(s.name)}`).join(' → ')}</div>
+   <a class="gbtn" href="${legLink(next)}" target="_blank" rel="noopener">Open in Google Maps</a>
+   ${todo.length>LEG?`<a class="gbtn sec2" href="${legLink(todo.slice(LEG,LEG*2))}" target="_blank" rel="noopener">Then: stops ${todo.slice(LEG,LEG*2).map(s=>s.seq).join(', ')}</a>`:''}`}
+  else o+=`<div class="gt"><h4>🎉 Route done for ${DAYS.find(d=>d.k===day).d}</h4></div>`;
+  o+=`<button class="gbtn sec2" id="finder" style="width:100%;box-sizing:border-box;background:#f0fdf4;color:#166534">🔎 Find new stores near me</button></div>`;
+  $('#gcard').innerHTML=o;$('#finder').onclick=openFinder;
+}
+let gLoad=null,gmap=null,gMarkers=[],gLine=null,gMe=null,gDay=null,geoCache=LS.get('geo',{});
+function loadGoogle(){
+  if(window.google&&google.maps&&google.maps.Map)return Promise.resolve();
+  if(gLoad)return gLoad;
+  gLoad=new Promise((res,rej)=>{window.__gmReady=res;window.gm_authFailure=()=>{rej(new Error('Google rejected the API key'));gLoad=null};
+    const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(mapsKey())+'&callback=__gmReady&loading=async&v=weekly';
+    s.async=true;s.onerror=()=>{rej(new Error('Couldn\'t load Google Maps (offline?)'));gLoad=null};document.head.appendChild(s)});
+  return gLoad;
+}
+function geocode(geocoder,addr){if(geoCache[addr])return Promise.resolve(geoCache[addr]);
+  return new Promise(res=>geocoder.geocode({address:addr,region:'us'},(r,st)=>{if(st==='OK'&&r[0]){const l=r[0].geometry.location;geoCache[addr]=[l.lat(),l.lng()];LS.set('geo',geoCache);res(geoCache[addr])}else res(null)}))}
+function pin(color,label,dashed){
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="34" height="44" viewBox="0 0 34 44"><path d="M17 43s14-14.6 14-25A14 14 0 0 0 3 18c0 10.4 14 25 14 25z" fill="${dashed?'#fff':color}" stroke="${dashed?'#16a34a':'#fff'}" stroke-width="2.5" ${dashed?'stroke-dasharray="4 3"':''}/><text x="17" y="22" font-family="Arial" font-weight="700" font-size="${String(label).length>1?12:14}" fill="${dashed?'#15803d':'#fff'}" text-anchor="middle">${label}</text></svg>`;
+  return{url:'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg),scaledSize:new google.maps.Size(34,44),anchor:new google.maps.Point(17,43)}}
+const HEXS={sold:'#16a34a',no:'#dc2626',fu:'#d97706',skip:'#64748b'};
+async function drawGoogleMap(){
+  const box=$('#mapbox');
+  if(!box.querySelector('#gmap')){box.innerHTML='<div id="gmap"></div><div class="mapnote" id="gnote">Loading Google Maps…</div>';gmap=null}
+  try{await loadGoogle()}catch(e){box.innerHTML=miniMap(day)+`<div class="mapnote">⚠️ ${esc(e.message)} — showing the sketch map instead. Check the key under Settings.</div>`;gmap=null;return}
+  if(!gmap){gmap=new google.maps.Map($('#gmap'),{center:{lat:40.75,lng:-73.93},zoom:13,clickableIcons:false,streetViewControl:false,mapTypeControl:false,fullscreenControl:true,gestureHandling:'greedy'});gDay=null}
+  const geocoder=new google.maps.Geocoder();const st=stopsFor(day);const pts=[];
+  for(const s of st){let ll=s.kind==='walk'&&s.lat?[s.lat,s.lng]:geoCache[fullAddr(s,day)]||null;if(!ll)ll=await geocode(geocoder,fullAddr(s,day));if(!ll&&s.lat)ll=[s.lat,s.lng];pts.push(ll)}
+  gMarkers.forEach(m=>m.setMap(null));gMarkers=[];if(gLine)gLine.setMap(null);
+  const bounds=new google.maps.LatLngBounds();const path=[];
+  st.forEach((s,i)=>{const ll=pts[i];if(!ll)return;const pos={lat:ll[0],lng:ll[1]};path.push(pos);bounds.extend(pos);const v=statusOf(s);
+    const m=new google.maps.Marker({position:pos,map:gmap,title:s.seq+'. '+s.name,zIndex:v?1:10,icon:pin(v?HEXS[v.status]:(s.kind==='walk'?'#4f46e5':HEX[day]),v?icon(v.status):s.seq,!v&&s.kind==='prospect')});
+    m.addListener('click',()=>openStop(s.id));gMarkers.push(m)});
+  gLine=new google.maps.Polyline({path,map:gmap,strokeColor:HEX[day],strokeOpacity:.7,strokeWeight:3});
+  if(gDay!==day&&path.length){gmap.fitBounds(bounds,30);gDay=day}
+  const n=$('#gnote');if(n)n.innerHTML='Tap a pin to check in · <b id="locme" style="cursor:pointer;color:#1a73e8">Show my location</b>';
+  const lm=$('#locme');if(lm)lm.onclick=()=>locate(p=>{const pos={lat:p[0],lng:p[1]};if(gMe)gMe.setMap(null);
+    gMe=new google.maps.Marker({position:pos,map:gmap,zIndex:99,icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#1a73e8',fillOpacity:1,strokeColor:'#fff',strokeWeight:3}});gmap.panTo(pos)});
+}
+function locate(cb,fail){if(!navigator.geolocation){toast('Location not available');fail&&fail();return}
+  navigator.geolocation.getCurrentPosition(p=>{here=[p.coords.latitude,p.coords.longitude];cb(here)},()=>{toast('Allow location access to use this');fail&&fail()},{enableHighAccuracy:true,timeout:12000,maximumAge:60000})}
+function drawMap(){if(!mapOn)return;if(mapsKey())drawGoogleMap();else $('#mapbox').innerHTML=miniMap(day)}
+function miniMap(k){
+  const st=PLAN[k].stops;const pr=project(st.map(s=>[s.lat,s.lng]).concat([[PLAN[k].start.lat,PLAN[k].start.lng]]),600);
+  const poly=P=>P.map(p=>pr.f(p).map(v=>v.toFixed(1)).join(',')).join(' ');
+  let o=`<svg class="map" viewBox="0 0 ${pr.W} ${pr.H}">`;
+  LAND.forEach(L=>o+=`<polygon points="${poly(L)}" fill="var(--land)" stroke="#c9d6df"/>`);
+  ROADS.forEach(r=>o+=`<polyline points="${poly(r.p)}" fill="none" stroke="${!r.ave&&!r.x?'var(--road2)':'var(--road)'}" stroke-width="${!r.ave&&!r.x?3:1.5}"/>`);
+  HOODS.forEach(([n,a,b])=>{const [x,y]=pr.f([a,b]);if(x<20||y<14||x>pr.W-20||y>pr.H-8)return;o+=`<text x="${x}" y="${y}" font-size="13" fill="#9a958a" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" letter-spacing="1.3">${esc(n.toUpperCase())}</text>`});
+  o+=`<polyline points="${poly([[PLAN[k].start.lat,PLAN[k].start.lng]].concat(st.map(s=>[s.lat,s.lng])))}" fill="none" stroke="${HEX[k]}" stroke-width="2.5" stroke-linejoin="round" opacity=".8"/>`;
+  st.forEach((s,i)=>{const [x,y]=pr.f([s.lat,s.lng]);const v=statusOf(s);
+    o+=s.kind==='prospect'&&!v?`<rect x="${x-9}" y="${y-9}" width="18" height="18" rx="3" transform="rotate(45 ${x} ${y})" fill="#fff" stroke="var(--pro)" stroke-width="2" stroke-dasharray="3 2"/><text x="${x}" y="${y+4}" font-size="10" font-weight="800" text-anchor="middle" fill="#15803d" font-family="Inter">${i+1}</text>`
+      :`<circle cx="${x}" cy="${y}" r="11" fill="${v?SC[v.status]:HEX[k]}" stroke="#fff" stroke-width="2"/><text x="${x}" y="${y+4}" font-size="${v?12:10.5}" font-weight="800" text-anchor="middle" fill="#fff" font-family="Inter">${v?icon(v.status):i+1}</text>`});
+  return o+'</svg>';
+}
+
+// ===================== store finder =====================
+function openFinder(){
+  const sh=$('#sheet');cur=null;
+  const q=t=>'https://www.google.com/maps/search/'+encodeURIComponent(t+' near me');
+  sh.innerHTML=`<div class="grab"></div><h2>Find new stores near you</h2><div class="sub">Delis, bodegas, grocers and gas stations close by that aren't on your list yet.</div>
+   <div id="fres" class="fres">${mapsKey()?'<div class="empty">Getting your location…</div>':'<div class="note" style="margin-top:12px">Add a Google Maps key in Settings to list nearby stores right here with one-tap “Add to route.” Until then, these open Google Maps:</div>'}</div>
+   <div class="lab">Search Google Maps</div><div class="qc">${['deli','bodega','grocery store','health food store','gas station convenience store','smoke shop'].map(t=>`<a class="qlink" href="${q(t)}" target="_blank" rel="noopener">${t}</a>`).join('')}</div>
+   <button class="clear" style="color:#111" id="fclose">Close</button>`;
+  showSheet();$('#fclose').onclick=closeSheet;
+  if(!mapsKey())return;
+  locate(async ll=>{
+    try{await loadGoogle();const {Place}=await google.maps.importLibrary('places');
+      const {places}=await Place.searchNearby({fields:['id','displayName','formattedAddress','location','nationalPhoneNumber','primaryTypeDisplayName'],
+        locationRestriction:{center:{lat:ll[0],lng:ll[1]},radius:700},includedPrimaryTypes:['convenience_store','grocery_store','supermarket','gas_station'],maxResultCount:20,rankPreference:'DISTANCE'});
+      const known=Object.values(directory()).map(d=>slug(d.name));
+      const fresh=(places||[]).filter(p=>{const n=slug(p.displayName||'');return!known.some(k=>k&&(k===n||k.includes(n)||n.includes(k)))});
+      const dist=p=>{const a=p.location.lat(),b=p.location.lng();return Math.round(Math.hypot((a-ll[0])*111000,(b-ll[1])*84000))};
+      $('#fres').innerHTML=fresh.length?fresh.map((p,i)=>`<div class="frow"><div><b>${esc(p.displayName)}</b><div class="m">${esc(p.primaryTypeDisplayName||'')} · ${dist(p)} m away</div><div class="m">${esc((p.formattedAddress||'').replace(/, USA$/,''))}${p.nationalPhoneNumber?' · '+esc(p.nationalPhoneNumber):''}</div></div>
+        <div class="fbtns"><button class="btn2 dark" data-add="${i}">+ Add</button><a class="btn2" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.displayName+', '+p.formattedAddress)}">Go</a></div></div>`).join('')
+        :'<div class="empty">No new stores within ~700 m. Try the searches below.</div>';
+      $('#fres').querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const p=fresh[+b.dataset.add];
+        const addr=(p.formattedAddress||'').replace(/, USA$/,'').replace(/, NY \d{5}$/,'');
+        addWalkin(p.displayName,addr,p.nationalPhoneNumber||'',p.location.lat(),p.location.lng());b.textContent='Added ✓';b.disabled=true});
+    }catch(e){$('#fres').innerHTML=`<div class="note" style="margin-top:12px">⚠️ Nearby search didn't work (${esc(e.message||e)}). Make sure “Places API (New)” is enabled for your key. The searches below still work.</div>`}
+  },()=>{$('#fres').innerHTML='<div class="note" style="margin-top:12px">Location is off — allow it for this site, or use the searches below.</div>'});
+}
+function addWalkin(name,addr,phone,lat,lng){
+  const id=`${day}_w_${Date.now().toString(36)}${Math.random().toString(36).slice(2,5)}`;
+  saveRec({id,day,kind:'walk',store:name,address:addr,phone,lat:lat||'',lng:lng||'',createdAt:new Date().toISOString(),status:'',cases:0,reasons:[],alsoDone:[],photos:[],items:[],deleted:false,storeKey:storeKeyOf(name,addr)},`Added to ${DAYS.find(d=>d.k===day).d}'s route`);
+  return id;
+}
+
+// ===================== check-in sheet =====================
+let draft=null,cur=null;
+function openStop(id){const s=stopsFor(day).find(x=>x.id===id);if(s)openSheet(s)}
+function openSheet(s){
+  cur=s;const v=live(s.id)||{};
+  draft={status:v.status||'',cases:v.cases||0,bought:v.bought||'',reasons:[...(v.reasons||[])],alsoDone:[...(v.alsoDone||[])],paid:v.paid||'',notes:v.notes||'',
+    contactName:v.contactName||'',contactPhone:v.contactPhone||'',items:JSON.parse(JSON.stringify(v.items||[])),freeCans:v.freeCans||0,freeCases:v.freeCases||0,discount:v.discount||'',
+    photos:[...(v.photos||[])],signature:v.signature||'',signer:v.signer||'',followUpDate:v.followUpDate||'',_fuTouched:!!v.followUpDate};
+  if(!draft.contactName||!draft.contactPhone){const tl=storeTimeline(s.storeKey);const k=tl.find(e=>e.contactName||e.contactPhone);if(k){draft.contactName=draft.contactName||k.contactName||'';draft.contactPhone=draft.contactPhone||k.contactPhone||''}}
+  drawSheet();showSheet();
+}
+function showSheet(){$('#scrim').classList.add('on');$('#sheet').classList.add('on');document.body.style.overflow='hidden';$('#sheet').scrollTop=0}
+function closeSheet(){$('#scrim').classList.remove('on');$('#sheet').classList.remove('on');document.body.style.overflow='';cur=null}
+$('#scrim').onclick=closeSheet;
+function qtyOf(pid){const it=draft.items.find(x=>x.id===pid);return it?it.q:0}
+function setQty(p,q){q=Math.max(0,q);let it=draft.items.find(x=>x.id===p.id);if(!it){it={id:p.id,n:p.name,p:+p.casePrice||0,q:0};draft.items.push(it)}it.q=q;it.n=p.name;it.p=+p.casePrice||0;draft.items=draft.items.filter(x=>x.q>0)}
+const orderTotal=()=>draft.items.reduce((t,x)=>t+x.q*(x.p||0),0);
+const orderCases=()=>draft.items.reduce((t,x)=>t+x.q,0);
+function sampleCost(){const u=avgUnitCost(),c=avgCase();return(draft.freeCans*(u||0))+(draft.freeCases*(c||0))+(parseFloat(draft.discount)||0)}
+function defaultFollow(){if(draft.status==='sold')return addDays(S().reorderDays);if(draft.status==='fu')return addDays(S().followUpDays);if(draft.status==='no')return draft.reasons.includes('Not interested')?'':addDays(21);return''}
+function drawSheet(){
+  const s=cur,v=live(s.id)||{},tl=storeTimeline(s.storeKey).filter(e=>e.id!==s.id),stg=stageOf(s.storeKey);
+  if(!draft._fuTouched)draft.followUpDate=defaultFollow();
+  const hasP=P().length>0,saleish=draft.status==='sold'||draft.status==='fu',why=draft.status==='no'||draft.status==='fu'||draft.status==='skip';
+  let o=`<div class="grab"></div><h2>${esc(s.name)}</h2><div class="sub">${esc(s.addr)}${s.contact?' · '+esc(s.contact):''}</div>
+   <div class="chips" style="margin-top:6px"><span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>${scans[s.storeKey]?`<span class="chip c-order">📱 ${scans[s.storeKey]} QR scans</span>`:''}</div>`;
+  if(tl.length){o+=`<details class="hist" ${tl.length?'open':''}><summary>History · ${tl.length} earlier visit${tl.length>1?'s':''}</summary>${tl.slice(0,6).map(e=>`<div class="hrow"><b class="s-${e.status}">${SL[e.status]}</b> · ${new Date(e.at).toLocaleDateString([],{month:'short',day:'numeric'})}${e.by?' · '+esc(e.by):''}${e.cases?` · ${e.cases} cs`:''}${e.bought?`<div class="m">${esc(e.bought)}</div>`:''}${(e.reasons||[]).length?`<div class="m">${esc(e.reasons.join(', '))}</div>`:''}${e.contactName?`<div class="m">👤 ${esc(e.contactName)} ${esc(e.contactPhone||'')}</div>`:''}${e.notes?`<div class="m">“${esc(e.notes)}”</div>`:''}</div>`).join('')}</details>`}
+  o+=`<div class="lab">Outcome</div><div class="outs">${['sold','no','fu','skip'].map(k=>`<button data-s="${k}" class="${draft.status===k?'on':''}">${k==='sold'?'✓ Sold':k==='no'?'✕ No sale':k==='fu'?'↻ Follow up':'– Closed / skip'}</button>`).join('')}</div>`;
+  if(saleish){
+    if(hasP){o+=`<div class="lab">Order ${draft.status==='fu'?'(if any)':''}</div><div class="order">${P().map(p=>`<div class="orow"><div><b>${esc(p.name)}</b><div class="m">${p.casePrice?money(p.casePrice)+'/cs':''}${p.unitsPerCase?' · '+p.unitsPerCase+'/cs':''}</div></div><div class="step sm"><button data-dq="${esc(p.id)}" data-d="-1">−</button><span class="qv">${qtyOf(p.id)}</span><button data-dq="${esc(p.id)}" data-d="1">+</button></div></div>`).join('')}
+      <div class="otot"><span>${orderCases()} cases</span><b>${money(orderTotal())}</b></div></div>`}
+    else o+=`<div class="lab">Cases ${draft.status==='fu'?'(if any)':''}</div><div class="step"><button data-c="-1">−</button><input id="cs" type="number" inputmode="numeric" min="0" value="${draft.cases}"><button data-c="1">+</button></div>
+      <div class="lab">What they bought</div><input id="bought" type="text" placeholder="Flavors, e.g. 2 cs Lemon, 1 cs Berry" value="${esc(draft.bought)}"><div class="m" style="margin-top:4px">Tip: add your flavors and prices in Settings → Products to get a tap-to-order form.</div>`;
+    o+=`<div class="lab">Also done</div><div class="qc" id="qd">${DONE_CHIPS.map(c=>`<button class="${draft.alsoDone.includes(c)?'on':''}">${esc(c)}</button>`).join('')}</div>`;
+  }
+  if(why){o+=`<div class="lab">Why</div><div class="qc" id="qr">${NO_CHIPS.map(c=>`<button class="${draft.reasons.includes(c)?'on':''}">${esc(c)}</button>`).join('')}</div>`;
+    const cb=draft.reasons.map(r=>[r,(config.pitch&&config.pitch.objections||{})[r]]).filter(x=>x[1]);
+    if(cb.length)o+=cb.map(([r,t])=>`<div class="comeback"><b>💬 ${esc(r)}</b><div>${esc(fillTokens(t))}</div></div>`).join('')}
+  if(draft.status){
+    o+=`<div class="lab">Shelf photos</div><div class="thumbs edit">${draft.photos.map((t,i)=>`<span class="tw">${imgTag(t)}<button class="tx" data-rp="${i}">✕</button></span>`).join('')}<label class="addph">📷<input id="ph" type="file" accept="image/*" capture="environment" multiple hidden></label></div>`;
+    o+=`<div class="lab">Samples & freebies</div><div class="row2"><div><div class="m">Free cans</div><div class="step sm"><button data-f="freeCans" data-d="-1">−</button><span class="qv">${draft.freeCans}</span><button data-f="freeCans" data-d="1">+</button></div></div>
+      <div><div class="m">Free cases</div><div class="step sm"><button data-f="freeCases" data-d="-1">−</button><span class="qv">${draft.freeCases}</span><button data-f="freeCases" data-d="1">+</button></div></div></div>
+      <div class="row2" style="margin-top:8px"><input id="disc" type="number" inputmode="decimal" placeholder="Discount $" value="${esc(draft.discount)}"><div class="m" style="align-self:center">Cost: <b>${money(sampleCost())}</b>${!P().length&&(draft.freeCans||draft.freeCases)?' (add prices in Settings)':''}</div></div>`;
+    o+=`<div class="lab">${draft.status==='sold'?'Reorder check':'Follow-up'} date</div><div class="row2"><input id="fud" type="date" value="${esc(draft.followUpDate)}"><button class="btn2" id="fuclr">${draft.followUpDate?'No follow-up':'Set default'}</button></div>`;
+    o+=`<div class="lab">Money collected ($)</div><input id="paid" type="number" inputmode="decimal" placeholder="0" value="${esc(draft.paid)}">
+    <div class="lab">Decision maker</div><div class="row2"><input id="cn" type="text" placeholder="Name" value="${esc(draft.contactName)}"><input id="cp" type="tel" placeholder="Cell" value="${esc(draft.contactPhone)}"></div>`;
+    if(saleish)o+=`<div class="lab">Signature ${draft.status==='fu'?'(optional)':'(drop-off / consignment)'}</div>${draft.signature?`<div class="sigshow">${imgTag(draft.signature,'sigimg')}<div class="m">Signed by ${esc(draft.signer||'—')}</div><button class="btn2" id="sigclr">Clear signature</button></div>`:`<button class="btn2" id="sigbtn" style="width:100%;box-sizing:border-box">✍️ Get signature</button>`}`;
+    o+=`<div class="lab">Notes</div><textarea id="notes" placeholder="Anything to remember for next visit">${esc(draft.notes)}</textarea>`;
+  }
+  o+=`<button class="save" id="save" ${draft.status?'':'disabled'}>Save check-in</button>`;
+  if(v.status)o+=`<button class="clear" id="clr">Clear this check-in</button>`;
+  if(s.kind==='walk')o+=`<button class="clear" id="delw">Remove this walk-in store</button>`;
+  if(v.at)o+=`<div class="who">Last saved ${new Date(v.at).toLocaleString([],{weekday:'short',hour:'numeric',minute:'2-digit'})}${v.by?' by '+esc(v.by):''}</div>`;
+  const sh=$('#sheet'),st=sh.scrollTop;sh.innerHTML=o;sh.scrollTop=st;
+  const g=id=>sh.querySelector('#'+id);
+  const grab=()=>{if(g('cs'))draft.cases=Math.max(0,parseInt(g('cs').value)||0);if(g('bought'))draft.bought=g('bought').value;if(g('paid'))draft.paid=g('paid').value;if(g('notes'))draft.notes=g('notes').value;
+    if(g('cn'))draft.contactName=g('cn').value;if(g('cp'))draft.contactPhone=g('cp').value;if(g('disc'))draft.discount=g('disc').value;if(g('fud')&&g('fud').value!==draft.followUpDate){draft.followUpDate=g('fud').value;draft._fuTouched=true}};
+  sh.querySelectorAll('.outs button').forEach(b=>b.onclick=()=>{grab();draft.status=b.dataset.s;if(!draft._fuTouched)draft.followUpDate=defaultFollow();drawSheet()});
+  sh.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{grab();draft.cases=Math.max(0,draft.cases+ +b.dataset.c);g('cs').value=draft.cases});
+  sh.querySelectorAll('[data-dq]').forEach(b=>b.onclick=()=>{grab();const p=P().find(x=>x.id===b.dataset.dq);setQty(p,qtyOf(p.id)+ +b.dataset.d);drawSheet()});
+  sh.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{grab();draft[b.dataset.f]=Math.max(0,draft[b.dataset.f]+ +b.dataset.d);drawSheet()});
+  const tog=(sel,arr,redraw)=>sh.querySelectorAll(sel+' button').forEach(b=>b.onclick=()=>{grab();const t=b.textContent,i=arr.indexOf(t);i<0?arr.push(t):arr.splice(i,1);if(redraw){if(!draft._fuTouched)draft.followUpDate=defaultFollow();drawSheet()}else b.classList.toggle('on')});
+  tog('#qd',draft.alsoDone,false);tog('#qr',draft.reasons,true);
+  if(g('disc'))g('disc').onchange=()=>{grab();drawSheet()};
+  if(g('fuclr'))g('fuclr').onclick=()=>{grab();draft._fuTouched=true;draft.followUpDate=draft.followUpDate?'':defaultFollow()||addDays(7);drawSheet()};
+  if(g('ph'))g('ph').onchange=async e=>{grab();for(const f of e.target.files){try{const d=await resizeImage(f,1400);draft.photos.push(await stashMedia(d,s.name,'photo'))}catch(err){toast('Couldn\'t read that photo')}}drawSheet()};
+  sh.querySelectorAll('[data-rp]').forEach(b=>b.onclick=e=>{e.preventDefault();grab();draft.photos.splice(+b.dataset.rp,1);drawSheet()});
+  if(g('sigbtn'))g('sigbtn').onclick=()=>{grab();openSigPad(s.name,draft.contactName,(tok,name)=>{draft.signature=tok;draft.signer=name;drawSheet()})};
+  if(g('sigclr'))g('sigclr').onclick=()=>{grab();draft.signature='';draft.signer='';drawSheet()};
+  const base=()=>({...(recs[s.id]||{}),id:s.id,day:s.kind==='revisit'?'due':(s.day||day),store:s.name,address:s.addr,phone:s.contact||'',kind:s.kind,deleted:false,storeKey:s.storeKey,revisitOf:s.revisitOf||(recs[s.id]||{}).revisitOf||'',lat:s.lat||'',lng:s.lng||''});
+  if(g('save'))g('save').onclick=()=>{grab();const sold=draft.status==='sold'||draft.status==='fu';
+    const items=sold?draft.items:[];const cases=hasP?items.reduce((t,x)=>t+x.q,0):(sold?draft.cases:0);
+    const bought=hasP?items.map(x=>`${x.q} cs ${x.n}`).join(', '):(sold?draft.bought:'');
+    const r={...base(),status:draft.status,cases,bought,items,orderTotal:items.length?orderTotal().toFixed(2):'',
+      reasons:draft.status==='sold'?[]:draft.reasons,alsoDone:sold?draft.alsoDone:[],paid:draft.paid,notes:draft.notes,contactName:draft.contactName,contactPhone:draft.contactPhone,
+      freeCans:draft.freeCans,freeCases:draft.freeCases,discount:draft.discount,sampleCost:sampleCost()?sampleCost().toFixed(2):'',photos:draft.photos,signature:draft.signature,signer:draft.signer,followUpDate:draft.followUpDate};
+    closeSheet();saveRec(r)};
+  if(g('clr'))g('clr').onclick=()=>{const r=base();Object.assign(r,{status:'',cases:0,bought:'',reasons:[],alsoDone:[],paid:'',notes:'',items:[],orderTotal:'',freeCans:0,freeCases:0,discount:'',sampleCost:'',photos:[],signature:'',signer:'',followUpDate:''});
+    if(s.kind==='revisit'){r.deleted=true}closeSheet();saveRec(r,'Check-in cleared')};
+  if(g('delw'))g('delw').onclick=()=>{const r={...base(),deleted:true};closeSheet();saveRec(r,'Store removed')};
+}
+function openSigPad(store,defName,done){
+  const pad=document.createElement('div');pad.className='sigpad';
+  pad.innerHTML=`<div class="sigbox"><h3>Sign for ${esc(store)}</h3><canvas id="sigc"></canvas><input id="sign" type="text" placeholder="Printed name" value="${esc(defName||'')}">
+   <div class="btnrow"><button class="btn2" id="sgx">Cancel</button><button class="btn2" id="sgc">Clear</button><button class="btn2 dark" id="sgo">Done</button></div></div>`;
+  document.body.appendChild(pad);
+  const c=pad.querySelector('#sigc'),r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;c.width=r.width*dpr;c.height=r.height*dpr;
+  const x=c.getContext('2d');x.scale(dpr,dpr);x.lineWidth=2.4;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#111';let down=false,inked=false;
+  const pt=e=>{const b=c.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top]};
+  c.onpointerdown=e=>{down=true;inked=true;c.setPointerCapture(e.pointerId);const[a,b]=pt(e);x.beginPath();x.moveTo(a,b)};
+  c.onpointermove=e=>{if(!down)return;const[a,b]=pt(e);x.lineTo(a,b);x.stroke()};
+  c.onpointerup=()=>down=false;
+  pad.querySelector('#sgc').onclick=()=>{x.clearRect(0,0,c.width,c.height);inked=false};
+  pad.querySelector('#sgx').onclick=()=>pad.remove();
+  pad.querySelector('#sgo').onclick=async()=>{if(!inked){toast('Sign in the box first');return}
+    const out=document.createElement('canvas');out.width=c.width;out.height=c.height;const o=out.getContext('2d');o.fillStyle='#fff';o.fillRect(0,0,out.width,out.height);o.drawImage(c,0,0);
+    const tok=await stashMedia(out.toDataURL('image/png'),store,'signature');const nm=pad.querySelector('#sign').value.trim();pad.remove();done(tok,nm)};
+}
+$('#addwalk').onclick=()=>{
+  cur=null;const sh=$('#sheet');
+  sh.innerHTML=`<div class="grab"></div><h2>Add a walk-in store</h2><div class="sub">Adds it to ${DAYS.find(d=>d.k===day).d}'s list for everyone. Or use 🔎 Find new stores to pick from nearby.</div>
+  <div class="lab">Store name</div><input id="wn" type="text" placeholder="e.g. Sunrise Deli">
+  <div class="lab">Address</div><input id="wa" type="text" placeholder="e.g. 45-12 Broadway">
+  <div class="lab">Phone (optional)</div><input id="wp" type="tel" placeholder="e.g. 718-555-0100">
+  <button class="save" id="wsave">Add store</button>`;
+  showSheet();
+  sh.querySelector('#wsave').onclick=()=>{const n=sh.querySelector('#wn').value.trim();if(!n){sh.querySelector('#wn').focus();return}
+    const id=addWalkin(n,sh.querySelector('#wa').value.trim(),sh.querySelector('#wp').value.trim());closeSheet();setTimeout(()=>openStop(id),250)};
+};
+
+// ===================== follow-ups tab =====================
+function renderDue(){
+  const t=ymd(),wk=addDays(7);let items=dueList();
+  const dist=d=>here&&d.lat?Math.hypot((d.lat-here[0])*111,(d.lng-here[1])*84):1e9;
+  items.sort(dueSort==='near'?(a,b)=>dist(a)-dist(b):(a,b)=>String(a.due).localeCompare(String(b.due)));
+  const groups=[['Overdue',x=>x.due<t],['Today',x=>x.due===t],['This week',x=>x.due>t&&x.due<=wk],['Later',x=>x.due>wk]];
+  const pipe={};STAGES.forEach(s=>pipe[s]=0);Object.keys(directory()).forEach(k=>pipe[stageOf(k)]++);
+  let o=`<div class="sum"><div class="sec" style="margin-top:0"><h4>Pipeline · every store</h4><div class="funnel">${STAGES.map(s=>`<div class="fstep"><span style="background:${STAGE_COL[s]}"></span><b>${pipe[s]}</b><small>${s}</small></div>`).join('')}</div></div>
+   <div class="ctrl" style="padding:12px 0 2px"><div class="seg" id="dsort"><button data-s="date" class="${dueSort==='date'?'on':''}">By date</button><button data-s="near" class="${dueSort==='near'?'on':''}">Nearest to me</button></div></div>`;
+  const now=items.filter(x=>x.due<=wk);
+  if(now.length){const legs=now.slice(0,LEG).map(x=>({...x,kind:x.kind||'acct'}));
+    o+=`<div class="gcard" style="margin:8px 0"><div class="gt"><h4>🧭 Drive the first ${legs.length}</h4><span style="font-size:12px;color:var(--mute)">${now.length} due this week</span></div><div class="gl">${legs.map(x=>esc(x.name)).join(' → ')}</div><a class="gbtn" href="${legLink(legs)}" target="_blank" rel="noopener">Open in Google Maps</a></div>`}
+  if(!items.length)o+=`<div class="empty">No follow-ups yet. When you mark a store “Follow up” or “Sold,” it lands here on its follow-up or reorder date.</div>`;
+  groups.forEach(([g,f])=>{const arr=items.filter(f);if(!arr.length)return;
+    o+=`<div class="lab" style="margin:16px 0 4px;color:${g==='Overdue'?'var(--no)':g==='Today'?'var(--fu)':'#777'}">${g} (${arr.length})</div>`;
+    arr.forEach((d,i)=>{const ph=(d.phone||'').match(/\d{3}-?\d{3}-?\d{4}/);const L=d.last;
+      o+=`<div class="st" data-k="${esc(d.storeKey)}"><div class="num" style="background:${STAGE_COL[d.stage]}">${d.why==='Reorder check'?'↺':'↻'}</div><div><h3>${esc(d.name)}</h3>
+       <div class="addr">${esc(d.addr||'')}${d.phone?' · '+esc(d.phone):''}</div>
+       <div class="chips"><span class="chip" style="background:${STAGE_COL[d.stage]}1f;color:${STAGE_COL[d.stage]}">${d.stage.toUpperCase()}</span><span class="chip c-check">${esc(d.why)} · ${fmtDate(d.due)}</span>${here&&d.lat?`<span class="chip c-check">${(dist(d)*0.621).toFixed(1)} mi</span>`:''}</div>
+       <div class="res" style="border-top:0;padding-top:4px;margin-top:4px">Last: <b class="s-${L.status}">${SL[L.status]}</b> ${new Date(L.at).toLocaleDateString([],{month:'short',day:'numeric'})}${L.cases?` · ${L.cases} cs`:''}${L.bought?' · '+esc(L.bought):''}${(L.reasons||[]).length?' · '+esc(L.reasons.join(', ')):''}${L.contactName?`<div class="m">👤 ${esc(L.contactName)} ${esc(L.contactPhone||'')}</div>`:''}${L.notes?`<div class="m">“${esc(L.notes)}”</div>`:''}</div>
+       <div class="acts"><a href="${navLink({...d,kind:d.kind||'acct'},d.day)}" target="_blank" rel="noopener" data-stop>Navigate</a>${ph?`<a href="tel:${ph[0].replace(/-/g,'')}" data-stop>Call</a>`:''}${L.contactPhone?`<a href="sms:${String(L.contactPhone).replace(/[^\d+]/g,'')}" data-stop>Text</a>`:''}<a href="#" data-open>Check in</a></div></div></div>`});
+  });
+  o+='</div>';$('#v-due').innerHTML=o;
+  $('#dsort').querySelectorAll('button').forEach(b=>b.onclick=()=>{dueSort=b.dataset.s;if(dueSort==='near'&&!here)locate(()=>renderDue(),()=>{dueSort='date';renderDue()});else renderDue()});
+  $('#v-due').querySelectorAll('.st[data-k]').forEach(el=>el.onclick=e=>{if(e.target.closest('[data-stop]'))return;e.preventDefault();
+    const d=items.find(x=>x.storeKey===el.dataset.k);const id=`rv_${d.storeKey}_${ymd().replace(/-/g,'')}`.slice(0,190);
+    openSheet({id,kind:'revisit',name:d.name,addr:d.addr||'',contact:d.phone||'',storeKey:d.storeKey,revisitOf:d.last.id,lat:d.lat,lng:d.lng,day:d.day})});
+}
+
+// ===================== pitch tab =====================
+function renderPitch(){
+  const p=config.pitch||{},prods=P();
+  let o=`<div class="sum">`;
+  o+=`<div class="sec" style="margin-top:0"><h4>Price sheet</h4>${prods.length?`<table class="ptab"><tr><th>Flavor</th><th>Case</th><th>Per can</th><th>Shelf</th><th>Store makes</th></tr>${prods.map(x=>{const m=marginOf(x),u=unitCost(x);return`<tr><td><b>${esc(x.name)}</b>${x.unitsPerCase?`<div class="m">${x.unitsPerCase}/case</div>`:''}</td><td>${x.casePrice?money(x.casePrice):'—'}</td><td>${u!=null?money(u):'—'}</td><td>${x.srp?money(x.srp):'—'}</td><td>${m?`<b style="color:var(--sold)">${money(m.per)}</b><div class="m">${Math.round(m.pct*100)}%</div>`:'—'}</td></tr>`}).join('')}</table>`:`<div class="it">No flavors yet — add them in <b>Settings → Products</b> to fill this in and turn on the tap-to-order form.</div>`}</div>`;
+  if(p.sellSheetUrl)o+=`<a class="gbtn" style="margin-top:12px" href="${esc(p.sellSheetUrl)}" target="_blank" rel="noopener">📄 Open sell sheet</a>`;
+  o+=`<div class="sec"><h4>Talking points</h4>${(p.points||[]).map(t=>`<div class="it">• ${esc(fillTokens(t))}</div>`).join('')||'<div class="it">Add talking points in Settings → Pitch kit.</div>'}</div>`;
+  o+=`<div class="sec"><h4>When they say…</h4>${Object.entries(p.objections||{}).filter(x=>x[1]).map(([r,t])=>`<div class="it"><b>${esc(r)}</b><div class="m" style="font-size:13px;color:#333">${esc(fillTokens(t))}</div></div>`).join('')}</div>`;
+  const qr=S().qrUrl;
+  o+=`<div class="sec"><h4>Show them the QR</h4><div class="it">${qr?`Shoppers who scan a shelf tag land here:<div class="m">${esc(qr)}</div><div id="pqr" style="width:180px;margin:10px auto"></div>`:'Set your TikTok / TikTok Shop link in Settings → QR shelf tags.'}</div></div>`;
+  o+='</div>';$('#v-pitch').innerHTML=o;
+  if(qr&&window.makeQR)$('#pqr').innerHTML=qrSVG(qr);
+}
+function qrSVG(text){const g=makeQR(text,'M'),n=g.length,q=4;let p='';g.forEach((row,r)=>row.forEach((d,c)=>{if(d)p+=`M${c+q},${r+q}h1v1h-1z`}));
+  return`<svg viewBox="0 0 ${n+2*q} ${n+2*q}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${p}" fill="#000"/></svg>`}
+
+// ===================== results tab =====================
+function renderSum(){
+  const ks=scope==='day'?[day]:DAYS.map(d=>d.k);
+  let t={sold:0,no:0,fu:0,skip:0,todo:0,cases:0,paid:0,orders:0,cost:0,total:0};const rows={sold:[],no:[],fu:[],skip:[]},reasons={},flav={};
+  ks.forEach(k=>{const c=dayStats(k);for(const x in t)t[x]+=c[x]||0;
+    stopsFor(k).forEach(s=>{const v=statusOf(s);if(!v)return;rows[v.status].push({k,s,v});(v.reasons||[]).forEach(r=>reasons[r]=(reasons[r]||0)+1);(v.items||[]).forEach(i=>flav[i.n]=(flav[i.n]||0)+i.q)})});
+  if(scope==='week')Object.values(recs).filter(r=>r.kind==='revisit'&&!r.deleted&&r.status).forEach(v=>{t[v.status]++;t.total++;t.cases+=+v.cases||0;t.paid+=parseFloat(v.paid)||0;t.orders+=parseFloat(v.orderTotal)||0;t.cost+=parseFloat(v.sampleCost)||0;rows[v.status].push({k:'due',s:{name:v.store},v})});
+  const done=t.total-t.todo,D=DAYS.find(d=>d.k===day);
+  let o=`<div class="scope seg"><button data-sc="day" class="${scope==='day'?'on':''}">${D.d} only</button><button data-sc="week" class="${scope==='week'?'on':''}">Whole week</button></div>
+  <div class="kgrid"><div class="k"><b>${done}/${t.total}</b><small>Visited</small></div><div class="k"><b style="color:var(--sold)">${t.sold}</b><small>Sold</small></div><div class="k"><b>${t.cases}</b><small>Cases</small></div>
+  <div class="k"><b>${done?Math.round(t.sold/done*100):0}%</b><small>Close rate</small></div><div class="k"><b>${money(t.orders)}</b><small>Orders</small></div><div class="k"><b>${money(t.paid)}</b><small>Collected</small></div>
+  <div class="k"><b style="color:var(--fu)">${t.fu}</b><small>Follow ups</small></div><div class="k"><b>${money(t.cost)}</b><small>Samples cost</small></div><div class="k"><b>${t.sold&&t.cost?money(t.cost/t.sold):'—'}</b><small>Cost / new acct</small></div></div>`;
+  const dl=k=>scope==='week'?`<b style="color:${HEX[k]||'#555'}">${k==='due'?'F/U':DAYS.find(d=>d.k===k).d}</b> · `:'';
+  const sec=(title,col,arr,fmt)=>arr.length?`<div class="sec"><h4 style="color:${col}">${title} (${arr.length})</h4>${arr.map(fmt).join('')}</div>`:'';
+  const extra=v=>`${v.contactName||v.contactPhone?'<div class="m">'+esc(v.contactName||'')+' '+esc(v.contactPhone||'')+'</div>':''}${v.notes?'<div class="m">“'+esc(v.notes)+'”</div>':''}`;
+  const fl=Object.entries(flav).sort((a,b)=>b[1]-a[1]);
+  if(fl.length)o+=`<div class="sec"><h4>Flavors sold</h4>${fl.map(([n,q])=>`<div class="it">${esc(n)} <b style="float:right">${q} cs</b></div>`).join('')}</div>`;
+  o+=sec('Sold','var(--sold)',rows.sold,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b> — ${v.cases||0} cs${v.orderTotal?' · '+money(v.orderTotal):''}${v.bought?'<div class="m">'+esc(v.bought)+'</div>':''}${extra(v)}</div>`);
+  o+=sec('Follow up','var(--fu)',rows.fu,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${v.followUpDate?' — '+fmtDate(v.followUpDate):''}${(v.reasons||[]).length?' — '+esc(v.reasons.join(', ')):''}${extra(v)}</div>`);
+  o+=sec('No sale','var(--no)',rows.no,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${(v.reasons||[]).length?' — '+esc(v.reasons.join(', ')):''}${extra(v)}</div>`);
+  const rs=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
+  if(rs.length)o+=`<div class="sec"><h4>Top objections</h4>${rs.map(([r,n])=>`<div class="it">${esc(r)} <b style="float:right">${n}</b></div>`).join('')}</div>`;
+  o+=sec('Closed / skipped','var(--skip)',rows.skip,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${v.notes?' — '+esc(v.notes):''}</div>`);
+  if(!done)o+=`<div class="empty">No check-ins yet${scope==='day'?' for '+D.d:''}. Results fill in as you check stores off.</div>`;
+  o+=`<button class="save" id="copyr">Copy ${scope==='day'?D.d+"'s":"the week's"} report</button><a class="gbtn" style="background:#111;margin-top:10px" href="dashboard.html" target="_blank" rel="noopener">📊 Open manager dashboard</a>`;
+  $('#sum').innerHTML=o;
+  $('#sum').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{scope=b.dataset.sc;renderSum()});
+  $('#copyr').onclick=()=>{const L=[`IV-X NYC route report — ${scope==='day'?D.d+' '+D.date+' · '+D.t:'Week of 11/9'}`,`Visited ${done}/${t.total} · Sold ${t.sold} · ${t.cases} cases${t.orders?' · '+money(t.orders)+' in orders':''} · Follow-ups ${t.fu} · No sale ${t.no} · Collected ${money(t.paid)}${t.cost?' · Samples '+money(t.cost):''}`,''];
+    if(fl.length){L.push('FLAVORS');fl.forEach(([n,q])=>L.push(`- ${n}: ${q} cs`));L.push('')}
+    [['SOLD','sold'],['FOLLOW UP','fu'],['NO SALE','no'],['CLOSED/SKIPPED','skip']].forEach(([h,k])=>{if(!rows[k].length)return;L.push(h);rows[k].forEach(({k:dk,s,v})=>L.push(`- ${scope==='week'?(dk==='due'?'F/U':DAYS.find(d=>d.k===dk).d)+': ':''}${s.name}${k==='sold'?` — ${v.cases||0} cs${v.bought?' ('+v.bought+')':''}`:''}${(v.reasons||[]).length?' — '+v.reasons.join(', '):''}${v.paid?` — ${money(v.paid)} collected`:''}${v.notes?' — "'+v.notes+'"':''}`));L.push('')});
+    copy(L.join('\n'),'Report copied')};
+}
+
+// ===================== settings tab =====================
+let confirmReset=false,setOpen=LS.get('setOpen',{});
+function renderSet(){
+  const u=syncUrl();
+  const appLink=location.origin+location.pathname;
+  const box=(id,title,body)=>`<details class="setbox" data-id="${id}" ${setOpen[id]!==false&&(setOpen[id]||['me','sync'].includes(id))?'open':''}><summary><h3>${title}</h3></summary>${body}</details>`;
+  const pr=P(),pi=config.pitch||{},st=S();
+  let o=box('me','👤 Your name',`<p>Shows next to every check-in you make.</p><input id="nm" type="text" placeholder="e.g. Nando" value="${esc(myName())}">`);
+  o+=box('sync','🔗 Account & sync',sb?`<p>${session?`Signed in as <b>${esc(session.user.email)}</b>. Check-ins sync live with everyone on the team.`:'You\'re signed out — check-ins stay on this phone until you sign in.'}</p>
+   <div class="msg">${session?(lastOk?'✅ Last synced '+new Date(lastOk).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+(rtLive?' · live updates on':''):(lastErr?'⚠️ '+esc(lastErr):'Not synced yet')):''}${outbox.length?' · '+outbox.length+' waiting to upload':''}</div>
+   <div class="btnrow">${session?'<button class="btn2" id="snow">Sync now</button><button class="btn2" id="sout">Sign out</button>':'<button class="btn2 dark" id="sin">Sign in</button>'}</div>`
+   :`<p>Cloud sync isn't set up in this copy of the app yet. Add your Supabase Project URL and publishable key to <b>config.js</b> and upload the folder again (see the setup guide). Until then, check-ins are saved on this phone only.</p>`);
+  if(sb)o+=box('invite','📨 Add your team',`<p><b>1.</b> In Supabase, go to <b>Authentication → Users → Add user → Create new user</b>. Enter their email and a password, and tick <b>Auto Confirm User</b>.<br><b>2.</b> Text them this link with their email and password.</p><input type="text" readonly value="${esc(appLink)}" onclick="this.select()"><div class="btnrow"><button class="btn2 dark" id="lcopy">Copy app link</button></div>`);
+  o+=box('prod','🥤 Products & prices',`<p>Your flavors. Powers the tap-to-order form, order totals, store margin and sample cost. Saved for the whole team.</p>
+   <div id="plist">${pr.map((x,i)=>`<div class="prow"><input data-pi="${i}" data-k="name" type="text" placeholder="Flavor" value="${esc(x.name)}"><div class="row3"><label>Case $<input data-pi="${i}" data-k="casePrice" type="number" inputmode="decimal" value="${esc(x.casePrice??'')}"></label><label>Cans/case<input data-pi="${i}" data-k="unitsPerCase" type="number" inputmode="numeric" value="${esc(x.unitsPerCase??'')}"></label><label>Shelf $<input data-pi="${i}" data-k="srp" type="number" inputmode="decimal" value="${esc(x.srp??'')}"></label></div><button class="tx2" data-del="${i}">Remove</button></div>`).join('')}</div>
+   <div class="btnrow"><button class="btn2" id="padd">+ Add flavor</button><button class="btn2 dark" id="psave">Save products</button></div>`);
+  o+=box('pitch','💬 Pitch kit',`<p>Shows on the Pitch tab and pops up when you tap a no-sale reason. Use {margin}, {unitCost} and {srp} to fill in numbers from your price list. Edit the [bracketed] parts before you go out.</p>
+   <div class="lab">Sell sheet link (PDF, Drive, Canva…)</div><input id="ssu" type="text" placeholder="https://…" value="${esc(pi.sellSheetUrl||'')}">
+   <div class="lab">Talking points (one per line)</div><textarea id="pts" rows="7">${esc((pi.points||[]).join('\n'))}</textarea>
+   ${NO_CHIPS.map(r=>`<div class="lab">When they say “${esc(r)}”</div><textarea data-obj="${esc(r)}" rows="2">${esc((pi.objections||{})[r]||'')}</textarea>`).join('')}
+   <div class="btnrow"><button class="btn2 dark" id="pisave">Save pitch kit</button></div>`);
+  o+=box('qr','📱 QR shelf tags',`<p>Each store gets its own QR tag to stick on the shelf or cooler. Scans are counted per store and send shoppers to this link. Print them from the <a href="dashboard.html#qr" target="_blank">dashboard</a>.</p>
+   <input id="qru" type="text" placeholder="https://www.tiktok.com/@yourbrand" value="${esc(st.qrUrl||'')}"><div class="btnrow"><button class="btn2 dark" id="qrsave">Save link</button></div>
+`);
+  o+=box('fu','📅 Follow-up timing',`<div class="row2"><label class="m">Reorder check after (days)<input id="rd" type="number" value="${esc(st.reorderDays)}"></label><label class="m">Follow up after (days)<input id="fd" type="number" value="${esc(st.followUpDays)}"></label></div>
+   <div class="btnrow"><button class="btn2 dark" id="fusave">Save</button></div>`);
+  o+=box('map','🗺️ Live Google Map',`<p>Paste a Google Maps API key for the live map and the 🔎 store finder. Without one, the “Open in Google Maps” buttons still work.</p>
+   <input id="mk" type="text" placeholder="AIza…" value="${esc(LS.get('mapsKey','')||CFG.MAPS_KEY||'')}"><div class="btnrow"><button class="btn2 dark" id="mksave">Save key</button></div>`);
+  o+=box('inst','📲 Install on your phone',`<p><b>iPhone:</b> open in Safari → Share → <i>Add to Home Screen</i>.<br><b>Android:</b> Chrome ⋮ → <i>Install app</i>.<br>Works without signal; check-ins and photos upload when you're back online.</p>${deferredPrompt?'<div class="btnrow"><button class="btn2 dark" id="inst">Install now</button></div>':''}`);
+  o+=box('phone','📱 This phone',`<p>${Object.values(recs).filter(r=>r.status&&!r.deleted).length} check-ins stored here · ${outbox.length} waiting to upload.</p><div class="btnrow"><a class="btn2" href="dashboard.html" target="_blank">Manager dashboard</a><button class="btn2" id="reset">Reset this phone</button></div>`);
+  $('#v-set').innerHTML=o;
+  document.querySelectorAll('#v-set details').forEach(d=>d.ontoggle=()=>{setOpen[d.dataset.id]=d.open;LS.set('setOpen',setOpen)});
+  const g=id=>document.getElementById(id);
+  g('nm').onchange=()=>{LS.set('name',g('nm').value.trim());toast('Name saved')};
+  if(g('snow'))g('snow').onclick=async()=>{await syncNow();renderSet()};
+  if(g('sout'))g('sout').onclick=async()=>{if(outbox.length&&!confirm2(g('sout'),`Tap again — ${outbox.length} not uploaded yet`))return;stopRealtime();try{await sb.auth.signOut()}catch(e){}session=null;renderSet();showLogin('Signed out.')};
+  if(g('sin'))g('sin').onclick=()=>showLogin();
+  if(g('lcopy'))g('lcopy').onclick=()=>copy(appLink,'App link copied');
+  const readProds=()=>{document.querySelectorAll('#plist [data-pi]').forEach(inp=>{const x=pr[+inp.dataset.pi];const k=inp.dataset.k;x[k]=k==='name'?inp.value.trim():(inp.value===''?'':+inp.value)})};
+  g('padd').onclick=()=>{readProds();pr.push({id:'p'+Date.now().toString(36),name:'',casePrice:'',unitsPerCase:'',srp:''});config.products=pr;setOpen.prod=true;renderSet()};
+  document.querySelectorAll('#plist [data-del]').forEach(b=>b.onclick=()=>{readProds();pr.splice(+b.dataset.del,1);config.products=pr;renderSet()});
+  g('psave').onclick=()=>{readProds();config.products=pr.filter(x=>x.name);saveConfig()};
+  g('pisave').onclick=()=>{const ob={};document.querySelectorAll('[data-obj]').forEach(t=>ob[t.dataset.obj]=t.value.trim());
+    config.pitch={sellSheetUrl:g('ssu').value.trim(),points:g('pts').value.split('\n').map(x=>x.trim()).filter(Boolean),objections:ob};saveConfig()};
+  g('qrsave').onclick=()=>{config.settings=Object.assign({},config.settings,{qrUrl:g('qru').value.trim()});saveConfig()};
+  g('fusave').onclick=()=>{config.settings=Object.assign({},config.settings,{reorderDays:+g('rd').value||14,followUpDays:+g('fd').value||3,});saveConfig()};
+  g('mksave').onclick=()=>{const v=g('mk').value.trim();if(v&&!/^AIza[\w-]{20,}$/.test(v)){toast('That doesn\'t look like a Google API key');return}LS.set('mapsKey',v);toast(v?'Key saved — reopen the app to load the map':'Key removed');renderSet()};
+  if(g('inst'))g('inst').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;renderSet()};
+  g('reset').onclick=()=>{if(outbox.length&&!confirmReset){confirmReset=true;g('reset').textContent=`Tap again — ${outbox.length} not uploaded will be lost`;return}
+    recs={};outbox=[];serverLog=[];LS.set('log',[]);persist();confirmReset=false;toast('Phone reset');syncNow(true);renderSet()};
+}
+
+// ===================== misc =====================
+function confirm2(btn,txt){if(btn.dataset.armed)return true;btn.dataset.armed='1';btn.textContent=txt;return false}
+function copy(t,msg){const ok=()=>toast(msg);const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(e){toast('Copy not allowed')}a.remove()};
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)}
+function switchTab(t){tab=t;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  ['route','due','pitch','sum','set'].forEach(k=>$('#v-'+k).hidden=t!==k);render();window.scrollTo(0,0)}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.t));
+$('#gear').onclick=()=>switchTab('set');
+$('#seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{filter=b.dataset.f;$('#seg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));renderRoute()});
+$('#mapt').onclick=()=>{mapOn=!mapOn;$('#mapbox').classList.toggle('on',mapOn);$('#mapt').textContent=mapOn?'Hide map':'Map';renderRoute()};
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=$('#install');b.innerHTML='📲 Put IV-X Field on your home screen — <b id="ib">Install</b>';b.classList.add('on');$('#ib').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;b.classList.remove('on')}});
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+render();boot();
+
+</script>
+</body>
+</html>

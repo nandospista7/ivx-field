@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IV-X</title><meta name="theme-color" content="#111316">
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111316;color:#fff;font:600 16px/1.4 system-ui,sans-serif;text-align:center}
+b{display:block;font-size:44px;letter-spacing:1px}b span{color:#5eead4}</style></head>
+<body><div><b>IV-X <span>●</span></b><p id="m">Opening…</p></div>
+<script src="config.js"></script>
+<script>
+// Shelf-tag landing page: counts the scan for this store, then sends the shopper to your TikTok link.
+(function(){
+  var C=window.IVX_CONFIG||{}, url=String(C.SUPABASE_URL||'').replace(/\/$/,''), key=C.SUPABASE_KEY||'';
+  var s=new URLSearchParams(location.search).get('s')||'', done=false;
+  function go(t){if(done)return;done=true;if(t&&/^https:\/\//.test(t))location.replace(t);else document.getElementById('m').textContent='Thanks for scanning!'}
+  if(url&&key&&s){
+    fetch(url+'/rest/v1/rpc/log_scan',{method:'POST',headers:{'apikey':key,'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({p_store:s})})
+      .then(function(r){return r.json()}).then(function(t){go(typeof t==='string'?t:'')}).catch(function(){go('')});
+    setTimeout(function(){go('')},4000);
+  } else go('');
+})();
+</script></body></html>
