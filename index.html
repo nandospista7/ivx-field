@@ -1101,6 +1101,9 @@ function shopBox(){const st=S(),on=!!st.shopifyAuto,ss=shopStatus;
    ${errs.length?`<div class="msg" style="color:var(--no)">${I('alert')} ${errs.length} sale${errs.length>1?'s':''} couldn't be sent: ${esc(errs[0].shopify.err)}</div>`:''}
    <div class="btnrow"><button class="btn2" id="shtest">Test connection</button>${on?'<button class="btn2" id="shsend">Send now</button>':''}</div>
    ${on&&older?`<div class="btnrow"><button class="btn2" id="shold">Also send my ${older} earlier sale${older>1?'s':''}</button></div><div class="m">Only do this if they aren't already in your retail app, or they'll be in there twice.</div>`:''}
+   <div class="lab">Cancel a field order</div>
+   <div class="m">For duplicates. Only works on orders the field app created. Cases go back into stock; the store isn't emailed.</div>
+   <div class="row2" style="margin-top:6px"><input id="shcn" type="text" inputmode="numeric" placeholder="Order #, e.g. 1731"><button class="btn2" id="shcancel">Cancel order</button></div>
    <div class="lab">Match your flavors to Shopify products</div>
    <div class="m">So orders use your real Shopify products and inventory. Unmatched flavors still go through as custom items.</div>
    <div id="shmap">${shopProducts?P().map((p,i)=>`<label class="shrow"><span>${esc(p.name)}</span><select data-shv="${i}"><option value="">Custom item (no inventory)</option>${shopProducts.map(v=>`<option value="${esc(v.variantId)}" ${shopVar(p)===v.variantId?'selected':''}>${esc(v.title)}${v.sku?' · '+esc(v.sku):''} · $${v.price}${v.inventory!=null?' · '+v.inventory+' in stock':''}</option>`).join('')}</select></label>`).join(''):`<div class="m" style="margin-top:6px">${P().filter(p=>shopVar(p)).length} of ${P().length} flavors matched.</div>`}</div>
@@ -1109,6 +1112,9 @@ function bindShop(g){
   if(!g('shtest'))return;
   g('shtest').onclick=async()=>{g('shtest').textContent='Testing…';try{const d=await shopCall({action:'ping'});shopStatus={ok:true,name:d.shop.name,at:Date.now()}}catch(e){shopStatus={ok:false,err:String(e.message||e),at:Date.now()}}LS.set('shopStatus',shopStatus);setOpen.shop=true;renderSet()};
   g('shauto').onchange=()=>{const on=g('shauto').checked;config.settings=Object.assign({},config.settings,{shopifyAuto:on,shopifySince:on?(S().shopifySince&&S().shopifyAuto?S().shopifySince:new Date().toISOString()):S().shopifySince});setOpen.shop=true;saveConfig();if(on)setTimeout(()=>shopPump({force:true}),500)};
+  if(g('shcancel'))g('shcancel').onclick=async()=>{const n=g('shcn').value.trim();if(!n){toast('Enter an order number');return}
+    if(!confirm2(g('shcancel'),'Tap again to cancel #'+n.replace(/\D/g,'')))return;g('shcancel').textContent='Canceling…';
+    try{const d=await shopCall({action:'cancelOrder',orderName:n});toast(d.already?d.name+' was already canceled':d.name+' canceled — stock restored')}catch(e){toast(String(e.message||e))}setOpen.shop=true;renderSet()};
   if(g('shsend'))g('shsend').onclick=async()=>{g('shsend').textContent='Sending…';await shopPump({force:true});setOpen.shop=true;renderSet();toast('Shopify is up to date')};
   if(g('shold'))g('shold').onclick=async()=>{if(!confirm2(g('shold'),'Tap again to send them'))return;g('shold').textContent='Sending…';await shopPump({force:true,all:true});setOpen.shop=true;renderSet()};
   if(g('shload'))g('shload').onclick=async()=>{g('shload').textContent='Loading…';try{const d=await shopCall({action:'products'});shopProducts=d.products;

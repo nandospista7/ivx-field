@@ -29,8 +29,8 @@ async function token() {
   return tok.value;
 }
 
-async function gql(query, variables = {}) {
-  const r = await fetch(`${base()}/admin/api/${API_VERSION}/graphql.json`, {
+async function gql(query, variables = {}, version = API_VERSION) {
+  const r = await fetch(`${base()}/admin/api/${version}/graphql.json`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": await token() },
     body: JSON.stringify({ query, variables }),
@@ -192,6 +192,21 @@ async function portalOrders(b) {
   }))).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 
+async function cancelOrder(b) {
+  // Only cancels orders this app created (tagged ivx-field). Restocks, no refund, no customer email.
+  const num = String(b.orderName || "").replace(/[^0-9]/g, "");
+  if (!num) throw new Error("Enter an order number, like 1731");
+  const f = await gql(`query($q: String!) { orders(first: 5, query: $q) { nodes { id name tags cancelledAt } } }`, { q: `name:${num}` });
+  const o = f.orders.nodes.find((x) => x.name.replace(/[^0-9]/g, "") === num);
+  if (!o) throw new Error("Order #" + num + " not found");
+  if (!o.tags.includes("ivx-field")) throw new Error("Order " + o.name + " wasn't created by IV-X Field, so it can't be canceled from here");
+  if (o.cancelledAt) return { name: o.name, already: true };
+  const r = await gql(`mutation($id: ID!, $note: String) { orderCancel(orderId: $id, reason: STAFF, restock: true, notifyCustomer: false, staffNote: $note) { job { id } orderCancelUserErrors { message } } }`, { id: o.id, note: String(b.note || "Duplicate - canceled from IV-X Field").slice(0, 250) }, "2026-10");
+  const e = r.orderCancel.orderCancelUserErrors || [];
+  if (e.length) throw new Error(e.map((x) => x.message).join("; "));
+  return { name: o.name, canceled: true };
+}
+
 async function signedIn(req) {
   // Confirms the caller is a signed-in IV-X Field user (works with new and legacy Supabase keys)
   const auth = req.headers.get("Authorization") || "";
@@ -214,6 +229,7 @@ Deno.serve(async (req) => {
     if (b.action === "products") return reply({ ok: true, products: await products() });
     if (b.action === "pushSale") return reply({ ok: true, ...(await pushSale(b)) });
     if (b.action === "portalOrders") return reply({ ok: true, orders: await portalOrders(b) });
+    if (b.action === "cancelOrder") return reply({ ok: true, ...(await cancelOrder(b)) });
     if (b.action === "payment") return reply({ ok: true, ...(await recordPayment(b)) });
     return reply({ error: "Unknown action" }, 400);
   } catch (e) {
