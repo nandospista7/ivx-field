@@ -1030,7 +1030,10 @@ async function shopCall(body){if(!sb||!session)throw new Error('Sign in first');
     if(data&&data.error)throw new Error(data.error);
     throw new Error('The "'+fn+'" function in Supabase doesn\'t have the IV-X Shopify code in it. Open it in Supabase, replace the code with the file from the setup link, and deploy again.')}
   throw new Error('The Shopify bridge isn\'t installed in Supabase yet (see setup steps).')}
-function shopLines(r){const out=[];(r.items||[]).forEach(it=>{const p=P().find(x=>x.id===it.id)||{};if(+it.q>0)out.push({variantId:p.shopifyVariantId||'',sku:p.sku||'',title:(p.line?p.line+' ':'')+(it.n||p.name||'IV-X'),price:+it.p||+p.casePrice||0,qty:+it.q})});
+const SHOP_VARIANTS={'pineapplepeach':'gid://shopify/ProductVariant/55646645649576','blueraspberry':'gid://shopify/ProductVariant/55646429118632','watermelonmint':'gid://shopify/ProductVariant/55647898730664','pomegranateacai':'gid://shopify/ProductVariant/55647991234728'};
+const shopKey=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z]/g,'');
+const shopVar=p=>(p&&(p.shopifyVariantId||SHOP_VARIANTS[shopKey(p.name)]))||'';
+function shopLines(r){const out=[];(r.items||[]).forEach(it=>{const p=P().find(x=>x.id===it.id)||{name:it.n};if(+it.q>0)out.push({variantId:shopVar(p),sku:p.sku||'',title:(p.line?p.line+' ':'')+(it.n||p.name||'IV-X'),price:+it.p||+p.casePrice||0,qty:+it.q})});
   if(!out.length&&+r.cases>0&&parseFloat(r.orderTotal)>0)out.push({title:'IV-X cases'+(r.bought?' – '+r.bought:''),price:parseFloat(r.orderTotal)/(+r.cases),qty:+r.cases});return out}
 const shopSince=()=>S().shopifySince||'9999';
 function shopPendingSales(all){const me=myName()||'';return Object.values(recs).filter(r=>!r.deleted&&r.status==='sold'&&r.kind!=='payment'&&!(r.shopify&&r.shopify.orderId)&&shopLines(r).length&&(r.by||'')===me&&(all||String(r.at||'')>=shopSince()))}
@@ -1063,7 +1066,7 @@ function shopBox(){const st=S(),on=!!st.shopifyAuto,ss=shopStatus;
    ${on&&older?`<div class="btnrow"><button class="btn2" id="shold">Also send my ${older} earlier sale${older>1?'s':''}</button></div><div class="m">Only do this if they aren't already in your retail app, or they'll be in there twice.</div>`:''}
    <div class="lab">Match your flavors to Shopify products</div>
    <div class="m">So orders use your real Shopify products and inventory. Unmatched flavors still go through as custom items.</div>
-   <div id="shmap">${shopProducts?P().map((p,i)=>`<label class="shrow"><span>${esc(p.name)}</span><select data-shv="${i}"><option value="">Custom item (no inventory)</option>${shopProducts.map(v=>`<option value="${esc(v.variantId)}" ${p.shopifyVariantId===v.variantId?'selected':''}>${esc(v.title)}${v.sku?' · '+esc(v.sku):''} · $${v.price}${v.inventory!=null?' · '+v.inventory+' in stock':''}</option>`).join('')}</select></label>`).join(''):`<div class="m" style="margin-top:6px">${P().filter(p=>p.shopifyVariantId).length} of ${P().length} flavors matched.</div>`}</div>
+   <div id="shmap">${shopProducts?P().map((p,i)=>`<label class="shrow"><span>${esc(p.name)}</span><select data-shv="${i}"><option value="">Custom item (no inventory)</option>${shopProducts.map(v=>`<option value="${esc(v.variantId)}" ${shopVar(p)===v.variantId?'selected':''}>${esc(v.title)}${v.sku?' · '+esc(v.sku):''} · $${v.price}${v.inventory!=null?' · '+v.inventory+' in stock':''}</option>`).join('')}</select></label>`).join(''):`<div class="m" style="margin-top:6px">${P().filter(p=>shopVar(p)).length} of ${P().length} flavors matched.</div>`}</div>
    <div class="btnrow">${shopProducts?'<button class="btn2 dark" id="shmsave">Save matches</button>':'<button class="btn2" id="shload">Load Shopify products</button>'}</div>`}
 function bindShop(g){
   if(!g('shtest'))return;
