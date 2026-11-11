@@ -1018,9 +1018,13 @@ let confirmReset=false,setOpen=LS.get('setOpen',{});
 let shopBusy=false,shopTry={},shopStatus=LS.get('shopStatus',null),shopProducts=null;
 const shopOn=()=>!!(sb&&session&&S().shopifyAuto);
 async function shopCall(body){if(!sb||!session)throw new Error('Sign in first');
-  const {data,error}=await sb.functions.invoke('shopify',{body});
-  if(error){let m=error.message||String(error);if(/not found|404|Failed to send/i.test(m))m='The Shopify bridge isn\'t installed in Supabase yet (see setup steps).';throw new Error(m)}
-  if(!data||data.ok===false||data.error)throw new Error((data&&data.error)||'No answer from Shopify');return data}
+  let last='';for(const fn of ['shopify','iv-x-field']){
+    const {data,error}=await sb.functions.invoke(fn,{body});
+    if(error){last=error.message||String(error);if(/not found|404|Failed to send/i.test(last))continue;throw new Error(last)}
+    if(data&&data.ok===true)return data;
+    if(data&&data.error)throw new Error(data.error);
+    throw new Error('The "'+fn+'" function in Supabase doesn\'t have the IV-X Shopify code in it. Open it in Supabase, replace the code with the file from the setup link, and deploy again.')}
+  throw new Error('The Shopify bridge isn\'t installed in Supabase yet (see setup steps).')}
 function shopLines(r){const out=[];(r.items||[]).forEach(it=>{const p=P().find(x=>x.id===it.id)||{};if(+it.q>0)out.push({variantId:p.shopifyVariantId||'',sku:p.sku||'',title:(p.line?p.line+' ':'')+(it.n||p.name||'IV-X'),price:+it.p||+p.casePrice||0,qty:+it.q})});
   if(!out.length&&+r.cases>0&&parseFloat(r.orderTotal)>0)out.push({title:'IV-X cases'+(r.bought?' – '+r.bought:''),price:parseFloat(r.orderTotal)/(+r.cases),qty:+r.cases});return out}
 const shopSince=()=>S().shopifySince||'9999';
