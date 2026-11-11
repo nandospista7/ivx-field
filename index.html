@@ -1007,7 +1007,7 @@ function renderSum(){
   if(rs.length)o+=`<div class="sec"><h4>Top objections</h4>${rs.map(([r,n])=>`<div class="it">${esc(r)} <b style="float:right">${n}</b></div>`).join('')}</div>`;
   o+=sec('Closed / skipped','var(--skip)',rows.skip,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${v.notes?' — '+esc(v.notes):''}</div>`);
   {const since=scope==='day'?null:'2026-11-09';const dayIso=D&&D.date?('2026-'+D.date.split('/').map(x=>x.padStart(2,'0')).join('-')):null;
-   const lk=new Set(Object.values(recs).filter(r=>r.shopify&&r.shopify.linked).map(r=>r.shopify.orderId));const po=(portal.orders||[]).filter(x=>!lk.has(x.id)).filter(x=>scope==='day'?String(x.at).slice(0,10)===dayIso:String(x.at).slice(0,10)>=since);
+   const lk=portalHidden();const po=(portal.orders||[]).filter(x=>!lk.has(x.id)).filter(x=>scope==='day'?String(x.at).slice(0,10)===dayIso:String(x.at).slice(0,10)>=since);
    if(po.length)o+=`<div class="sec"><h4 style="color:#6d28d9">Portal reorders (IV-X Retailer) · ${po.length} · ${po.reduce((a,x)=>a+x.cases,0)} cs · ${money(po.reduce((a,x)=>a+x.total,0))}</h4>${po.map(x=>`<div class="it"><b>${esc(x.customer||'Retailer')}</b> — ${x.cases} cs · ${money(x.total)} <span class="m" style="float:right">${esc(md(x.at))} ${esc(x.name)}</span></div>`).join('')}</div>`}
   if(!done)o+=`<div class="empty">No check-ins yet${scope==='day'?' for '+D.d:''}. Results fill in as you check stores off.</div>`;
   o+=`<button class="save" id="copyr">Copy ${scope==='day'?D.d+"'s":"the week's"} report</button><a class="gbtn" style="background:#111;margin-top:10px" href="dashboard.html" target="_blank" rel="noopener">${I('chart')} Open manager dashboard</a>`;
@@ -1060,10 +1060,10 @@ async function shopPump(opts={}){
       catch(e){p.shopify=Object.assign({},p.shopify||{},{err:String(e.message||e)});persist();changed=true}}
   }finally{shopBusy=false;if(changed){render();if(outbox.length)syncNow(true)}}
 }
-// one-time: field sales sent on 11/11 that were already entered in IV-X Retailer -> point them at the portal order
-const RELINK_1111={'#1731':['gid://shopify/Order/19093297135784','#1728','orders/19093297135784',0],'#1732':['gid://shopify/DraftOrder/1625360629928','#D66','draft_orders/1625360629928',1],'#1733':['gid://shopify/DraftOrder/1625364365480','#D67','draft_orders/1625364365480',1],'#1734':['gid://shopify/DraftOrder/1625480036520','#D68','draft_orders/1625480036520',1],'#1735':['gid://shopify/DraftOrder/1625486950568','#D69','draft_orders/1625486950568',1],'#1736':['gid://shopify/DraftOrder/1625490981032','#D70','draft_orders/1625490981032',1]};
-function relinkOnce(){let n=0;Object.values(recs).forEach(r=>{const s=r.shopify;const m=s&&!s.linked&&RELINK_1111[s.orderName];if(!m)return;
-  shopMark(r,{orderId:m[0],orderName:m[1],url:'https://admin.shopify.com/store/iiubu5-m1/'+m[2],linked:true,draft:!!m[3],dup:s.orderName,err:''});n++});if(n){persist();syncNow(true)}}
+// 11/11: field orders #1731-#1736 are the records of truth; the portal entries for the same sales are hidden as duplicates
+const KEEP_1111={'#1731':['gid://shopify/Order/19100544663720','gid://shopify/Order/19093297135784'],'#1732':['gid://shopify/Order/19100544827560','gid://shopify/DraftOrder/1625360629928'],'#1733':['gid://shopify/Order/19100544958632','gid://shopify/DraftOrder/1625364365480'],'#1734':['gid://shopify/Order/19100545089704','gid://shopify/DraftOrder/1625480036520'],'#1735':['gid://shopify/Order/19100545286312','gid://shopify/DraftOrder/1625486950568'],'#1736':['gid://shopify/Order/19100545548456','gid://shopify/DraftOrder/1625490981032']};
+function relinkOnce(){let n=0;Object.values(recs).forEach(r=>{const s=r.shopify;if(!s)return;const name=s.dup||s.orderName;const m=KEEP_1111[name];if(!m||(s.orderId===m[0]&&s.portalDup===m[1]))return;
+  shopMark(r,{orderId:m[0],orderName:name,url:'https://admin.shopify.com/store/iiubu5-m1/orders/'+m[0].split('/').pop(),linked:false,draft:false,dup:'',portalDup:m[1],err:''});n++});if(n){persist();syncNow(true)}}
 // ---- IV-X Retailer portal reorders (read-only) ----
 let portal=LS.get('portal',{at:0,orders:[]}),portalBusy=false;
 const pNorm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -1080,7 +1080,8 @@ function portalIndex(){ // storeKey -> orders (newest first)
     const k=key||'?'+pNorm(o.customer);(m[k]=m[k]||[]).push(o)});
   Object.values(m).forEach(a=>a.sort((x,y)=>String(y.at).localeCompare(String(x.at))));
   portalIndex._at=portal.at;portalIndex._n=Object.keys(recs).length;portalIndex._m=m;return m}
-const portalFor=key=>(portalIndex()[key]||[]).filter(o=>!Object.values(recs).some(r=>r.shopify&&r.shopify.linked&&r.shopify.orderId===o.id));
+const portalHidden=()=>new Set(Object.values(recs).flatMap(r=>r.shopify?[r.shopify.linked?r.shopify.orderId:'',r.shopify.portalDup||'']:[]).filter(Boolean));
+const portalFor=key=>{const h=portalHidden();return(portalIndex()[key]||[]).filter(o=>!h.has(o.id))};
 const md=iso=>new Date(iso).toLocaleDateString([],{month:'numeric',day:'numeric'});
 function portalChip(key){const o=portalFor(key)[0];return o?`<span class="chip c-portal">PORTAL ${esc(md(o.at))} · ${o.cases} CS${o.draft?' · UNPAID':''}</span>`:''}
 function portalBlock(key){const L=portalFor(key);if(!L.length)return'';
