@@ -569,7 +569,9 @@ const icon=st=>I(st==='sold'?'check':st==='no'?'x':st==='fu'?'refresh':'minus');
 const glyph=st=>st==='sold'?'✓':st==='no'?'✕':st==='fu'?'↻':'–'; // plain text marks for map pins
 const fullAddr=(s,k)=>{const a=(s.addr||'').replace(/\s*\(.*?\)/g,'').trim();const city=(['mon','tue'].includes(k)?'Queens, NY':'New York, NY');if(!a)return s.name+', '+city;
   if(/ny\b|queens|astoria|long island city|new york|brooklyn|bronx/i.test(a))return(s.kind!=='acct'?s.name+', ':'')+a;return(s.kind!=='acct'?s.name+', ':'')+a+', '+city};
-const navLink=(s,k)=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(s.lat&&s.kind==='walk'&&!s.addr?s.lat+','+s.lng:fullAddr(s,k));
+const mapApp=()=>LS.get('mapApp','apple');const mapName=()=>mapApp()==='apple'?'Apple Maps':'Google Maps';
+const dirLink=dest=>mapApp()==='apple'?'https://maps.apple.com/?dirflg=d&daddr='+encodeURIComponent(dest):'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(dest);
+const navLink=(s,k)=>dirLink(s.lat&&s.kind==='walk'&&!s.addr?s.lat+','+s.lng:fullAddr(s,k));
 
 // ===================== render: route =====================
 function renderRoute(){
@@ -610,6 +612,7 @@ const fmtDate=d=>{if(!d)return'';const x=new Date(d+'T12:00:00');return x.toLoca
 // ----- Google Maps: legs card, live map -----
 const LEG=4;
 function legLink(stops,k){const enc=encodeURIComponent;const a=s=>s.lat&&s.kind==='walk'&&!s.addr?s.lat+','+s.lng:fullAddr(s,k||s.day||day);const dest=stops[stops.length-1],wps=stops.slice(0,-1);
+  if(mapApp()==='apple')return'https://maps.apple.com/?dirflg=d'+stops.map(s=>'&daddr='+enc(a(s))).join('');
   return'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+enc(a(dest))+(wps.length?'&waypoints='+wps.map(s=>enc(a(s))).join('%7C'):'')}
 function renderGCard(){
   const todo=stopsFor(day).filter(s=>!statusOf(s));
@@ -617,7 +620,7 @@ function renderGCard(){
   if(todo.length){const next=todo.slice(0,LEG),legs=Math.ceil(todo.length/LEG);
     o+=`<div class="gt"><h4>${I('nav')} Drive the next ${next.length} stop${next.length>1?'s':''}</h4><span style="font-size:12px;color:var(--mute)">${todo.length} left · ${legs} leg${legs>1?'s':''}</span></div>
    <div class="gl">${next.map(s=>`<b>${s.seq}</b> ${esc(s.name)}`).join(' → ')}</div>
-   <a class="gbtn" href="${legLink(next)}" target="_blank" rel="noopener">Open in Google Maps</a>
+   <a class="gbtn" href="${legLink(next)}" target="_blank" rel="noopener">Open in ${mapName()}</a>
    ${todo.length>LEG?`<a class="gbtn sec2" href="${legLink(todo.slice(LEG,LEG*2))}" target="_blank" rel="noopener">Then: stops ${todo.slice(LEG,LEG*2).map(s=>s.seq).join(', ')}</a>`:''}`}
   else o+=`<div class="gt"><h4>${I('check')} Route done for ${DAYS.find(d=>d.k===day).d}</h4></div>`;
   o+=`<button class="gbtn sec2" id="finder" style="width:100%;box-sizing:border-box;background:#f0fdf4;color:#166534">${I('search')} Find new stores near me</button></div>`;
@@ -676,10 +679,10 @@ function miniMap(k){
 // ===================== store finder =====================
 function openFinder(){
   const sh=$('#sheet');cur=null;
-  const q=t=>'https://www.google.com/maps/search/'+encodeURIComponent(t+' near me');
+  const q=t=>mapApp()==='apple'?'https://maps.apple.com/?q='+encodeURIComponent(t):'https://www.google.com/maps/search/'+encodeURIComponent(t+' near me');
   sh.innerHTML=`<div class="grab"></div><h2>Find new stores near you</h2><div class="sub">Delis, bodegas, grocers and gas stations close by that aren't on your list yet.</div>
-   <div id="fres" class="fres">${mapsKey()?'<div class="empty">Getting your location…</div>':'<div class="note" style="margin-top:12px">Add a Google Maps key in Settings to list nearby stores right here with one-tap “Add to route.” Until then, these open Google Maps:</div>'}</div>
-   <div class="lab">Search Google Maps</div><div class="qc">${['deli','bodega','grocery store','health food store','gas station convenience store','smoke shop'].map(t=>`<a class="qlink" href="${q(t)}" target="_blank" rel="noopener">${t}</a>`).join('')}</div>
+   <div id="fres" class="fres">${mapsKey()?'<div class="empty">Getting your location…</div>':'<div class="note" style="margin-top:12px">Add a Google Maps key in Settings to list nearby stores right here with one-tap “Add to route.” Until then, these open ${mapName()}:</div>'}</div>
+   <div class="lab">Search ${mapName()}</div><div class="qc">${['deli','bodega','grocery store','health food store','gas station convenience store','smoke shop'].map(t=>`<a class="qlink" href="${q(t)}" target="_blank" rel="noopener">${t}</a>`).join('')}</div>
    <button class="clear" style="color:#111" id="fclose">Close</button>`;
   showSheet();$('#fclose').onclick=closeSheet;
   if(!mapsKey())return;
@@ -691,7 +694,7 @@ function openFinder(){
       const fresh=(places||[]).filter(p=>{const n=slug(p.displayName||'');return!known.some(k=>k&&(k===n||k.includes(n)||n.includes(k)))});
       const dist=p=>{const a=p.location.lat(),b=p.location.lng();return Math.round(Math.hypot((a-ll[0])*111000,(b-ll[1])*84000))};
       $('#fres').innerHTML=fresh.length?fresh.map((p,i)=>`<div class="frow"><div><b>${esc(p.displayName)}</b><div class="m">${esc(p.primaryTypeDisplayName||'')} · ${dist(p)} m away</div><div class="m">${esc((p.formattedAddress||'').replace(/, USA$/,''))}${p.nationalPhoneNumber?' · '+esc(p.nationalPhoneNumber):''}</div></div>
-        <div class="fbtns"><button class="btn2 dark" data-add="${i}">+ Add</button><a class="btn2" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.displayName+', '+p.formattedAddress)}">Go</a></div></div>`).join('')
+        <div class="fbtns"><button class="btn2 dark" data-add="${i}">+ Add</button><a class="btn2" target="_blank" rel="noopener" href="${dirLink(p.displayName+', '+p.formattedAddress)}">Go</a></div></div>`).join('')
         :'<div class="empty">No new stores within ~700 m. Try the searches below.</div>';
       $('#fres').querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{const p=fresh[+b.dataset.add];
         const addr=(p.formattedAddress||'').replace(/, USA$/,'').replace(/, NY \d{5}$/,'');
@@ -947,7 +950,7 @@ function renderDue(){
    <div class="ctrl" style="padding:12px 0 2px"><div class="seg" id="dsort"><button data-s="date" class="${dueSort==='date'?'on':''}">By date</button><button data-s="near" class="${dueSort==='near'?'on':''}">Nearest to me</button></div></div>`;
   const now=items.filter(x=>x.due<=wk);
   if(now.length){const legs=now.slice(0,LEG).map(x=>({...x,kind:x.kind||'acct'}));
-    o+=`<div class="gcard" style="margin:8px 0"><div class="gt"><h4>${I('nav')} Drive the first ${legs.length}</h4><span style="font-size:12px;color:var(--mute)">${now.length} due this week</span></div><div class="gl">${legs.map(x=>esc(x.name)).join(' → ')}</div><a class="gbtn" href="${legLink(legs)}" target="_blank" rel="noopener">Open in Google Maps</a></div>`}
+    o+=`<div class="gcard" style="margin:8px 0"><div class="gt"><h4>${I('nav')} Drive the first ${legs.length}</h4><span style="font-size:12px;color:var(--mute)">${now.length} due this week</span></div><div class="gl">${legs.map(x=>esc(x.name)).join(' → ')}</div><a class="gbtn" href="${legLink(legs)}" target="_blank" rel="noopener">Open in ${mapName()}</a></div>`}
   if(!items.length)o+=`<div class="empty">No follow-ups yet. When you mark a store “Follow up” or “Sold,” it lands here on its follow-up or reorder date.</div>`;
   groups.forEach(([g,f])=>{const arr=items.filter(f);if(!arr.length)return;
     o+=`<div class="lab" style="margin:16px 0 4px;color:${g==='Overdue'?'var(--no)':g==='Today'?'var(--fu)':'#777'}">${g} (${arr.length})</div>`;
@@ -1148,7 +1151,8 @@ function renderSet(){
   o+=box('rc',I('file')+'Receipts',`<p>Last line on every receipt you text or email to a store.</p><input id="rf" type="text" placeholder="Thank you for carrying IV-X!" value="${esc(st.receiptFooter||'')}"><div class="btnrow"><button class="btn2 dark" id="rfsave">Save</button></div>`);
   o+=box('fu',I('calendar')+'Follow-up timing',`<div class="row2"><label class="m">Reorder check after (days)<input id="rd" type="number" value="${esc(st.reorderDays)}"></label><label class="m">Follow up after (days)<input id="fd" type="number" value="${esc(st.followUpDays)}"></label></div>
    <div class="btnrow"><button class="btn2 dark" id="fusave">Save</button></div>`);
-  o+=box('map',I('map')+'Live Google Map',`<p>Paste a Google Maps API key for the live map and the store finder. Without one, the “Open in Google Maps” buttons still work.</p>
+  o+=box('nav',I('nav')+'Navigation app',`<p>Which app opens when you tap Navigate or the driving buttons. Saved on this phone.</p><div class="seg" id="navseg" style="margin-top:8px">${[['apple','Apple Maps'],['google','Google Maps']].map(([k,n])=>`<button data-nav="${k}" class="${mapApp()===k?'on':''}">${n}</button>`).join('')}</div>`);
+  o+=box('map',I('map')+'Live Google Map',`<p>Paste a Google Maps API key for the live map and the store finder. Without one, the driving buttons still work.</p>
    <input id="mk" type="text" placeholder="AIza…" value="${esc(LS.get('mapsKey','')||CFG.MAPS_KEY||'')}"><div class="btnrow"><button class="btn2 dark" id="mksave">Save key</button></div>`);
   o+=box('inst',I('phone')+'Install on your phone',`<p><b>iPhone:</b> open in Safari → Share → <i>Add to Home Screen</i>.<br><b>Android:</b> Chrome ⋮ → <i>Install app</i>.<br>Works without signal; check-ins and photos upload when you're back online.</p>${deferredPrompt?'<div class="btnrow"><button class="btn2 dark" id="inst">Install now</button></div>':''}`);
   o+=box('phone',I('phone')+'This phone',`<p>${Object.values(recs).filter(r=>r.status&&!r.deleted).length} check-ins stored here · ${outbox.length} waiting to upload.</p><div class="btnrow"><button class="btn2" id="wtour">Show welcome tour</button></div><div class="btnrow"><a class="btn2" href="dashboard.html" target="_blank">Manager dashboard</a><button class="btn2" id="reset">Reset this phone</button></div>`);
@@ -1170,6 +1174,7 @@ function renderSet(){
   g('qrsave').onclick=()=>{config.settings=Object.assign({},config.settings,{qrUrl:g('qru').value.trim()});saveConfig()};
   g('fusave').onclick=()=>{config.settings=Object.assign({},config.settings,{reorderDays:+g('rd').value||14,followUpDays:+g('fd').value||3,});saveConfig()};
   g('rfsave').onclick=()=>{config.settings=Object.assign({},config.settings,{receiptFooter:g('rf').value.trim()});saveConfig()};
+  document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{LS.set('mapApp',b.dataset.nav);setOpen.nav=true;toast('Directions open in '+mapName());renderSet()});
   g('mksave').onclick=()=>{const v=g('mk').value.trim();if(v&&!/^AIza[\w-]{20,}$/.test(v)){toast('That doesn\'t look like a Google API key');return}LS.set('mapsKey',v);toast(v?'Key saved — reopen the app to load the map':'Key removed');renderSet()};
   if(g('inst'))g('inst').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;renderSet()};
   if(g('wtour'))g('wtour').onclick=()=>{wStep=0;showWelcome()};
@@ -1181,7 +1186,7 @@ function renderSet(){
 // ===================== welcome tour =====================
 const WELCOME=[
   {i:'box',t:'Welcome to IV-X Field',b:'Your tool for getting IV-X on shelves across NYC. Every store on the route, every visit and every sale lives here, shared live with the whole team.'},
-  {i:'pin',t:'Follow your route',b:'Pick the day at the top. Stores are listed in driving order. Tap <b>Open in Google Maps</b> to get directions through your next four stops, or <b>Navigate</b> and <b>Call</b> on any store.'},
+  {i:'pin',t:'Follow your route',b:'Pick the day at the top. Stores are listed in driving order. Tap <b>Open in Apple Maps</b> to get directions through your next stops, or <b>Navigate</b> and <b>Call</b> on any store.'},
   {i:'check',t:'Check in at every store',b:'Tap a store and choose <b>Sold</b>, <b>No sale</b>, <b>Follow up</b> or <b>Closed</b>. Add the order by flavor, shelf photos, samples left, the owner\'s contact and a signature if needed.'},
   {i:'repeat',t:'Never miss a follow-up',b:'<b>Follow-ups</b> lists every store due for a revisit or reorder check. <b>Pitch</b> has prices, store margins and answers to common objections.'},
   {i:'chart',t:'Works anywhere',b:'No signal? Keep going. Check-ins save on your phone and upload automatically. See totals on <b>Results</b>, and add the app to your home screen for one-tap access.'}];
