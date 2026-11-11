@@ -129,6 +129,7 @@ textarea{min-height:70px;resize:vertical}
 .c-shop{background:#e3f5e1;color:#1f6b2b;text-decoration:none}.c-shoperr{background:#fde8e8;color:#b42318}
 .tgl{display:flex;gap:8px;align-items:center;font-weight:700;margin:10px 0 2px}.tgl input{width:20px;height:20px}
 .shrow{display:block;margin:8px 0}.shrow span{display:block;font-weight:700;font-size:13px;margin-bottom:3px}.shrow select{width:100%;padding:9px;border-radius:9px;border:1px solid #d9d5cc;background:#fff;font-size:14px}
+.c-portal{background:#ede9fe;color:#5b21b6}
 
 .gear{all:unset;cursor:pointer;font-size:18px;padding:2px 4px;margin-left:8px;color:#cfd2d8}
 .setbox{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 14px}
@@ -429,7 +430,10 @@ function dueList(){
   const dir=directory(), out=[];
   Object.keys(dir).forEach(key=>{const tl=storeTimeline(key);if(!tl.length)return;const last=tl[0];
     if(!last.followUpDate||last.status==='skip'&&!last.followUpDate)return;
-    out.push({...dir[key],due:last.followUpDate,last,stage:stageOf(key,tl),why:last.status==='sold'?'Reorder check':last.status==='fu'?'Follow up':last.status==='no'?'Try again':'Revisit'})});
+    let due=last.followUpDate,why=last.status==='sold'?'Reorder check':last.status==='fu'?'Follow up':last.status==='no'?'Try again':'Revisit';
+    const po=typeof portalFor==='function'?portalFor(key)[0]:null;
+    if(po&&String(po.at)>String(last.at||'')){const nd=addDays(S().reorderDays,String(po.at).slice(0,10));if(nd>due)due=nd;why=last.status==='sold'?'Reorder check · reordered in portal '+md(po.at):why+' · ordered in portal '+md(po.at)}
+    out.push({...dir[key],due,last,stage:stageOf(key,tl),why})});
   return out;
 }
 
@@ -478,7 +482,7 @@ async function syncNow(quiet){
     (cfg||[]).forEach(x=>{if(String(x.key).startsWith('van:')&&!vanDirty.includes(x.key))vans[x.key]=x.value});LS.set('vans',vans);
     persist();lastOk=Date.now();lastErr='';$('#banner').classList.remove('on');
   }catch(e){lastErr=String(e.message||e);if(/JWT|token|auth/i.test(lastErr)){banner('Your sign-in expired — sign in again in Settings.')}else if(!quiet)banner('Couldn\'t reach the server. Check-ins are safe on this phone and will upload automatically. ('+lastErr+')')}
-  finally{syncing=false;syncLabel();render();setTimeout(()=>shopPump(),300)}
+  finally{syncing=false;syncLabel();render();setTimeout(()=>{shopPump();portalPull()},300)}
 }
 function startRealtime(){if(!sb||rtChan)return;
   rtChan=sb.channel('checkins-live').on('postgres_changes',{event:'*',schema:'public',table:'checkins'},()=>{clearTimeout(rtTimer);rtTimer=setTimeout(()=>syncNow(true),1200)})
@@ -578,7 +582,7 @@ function renderRoute(){
   if(!st.length)o+=`<div class="empty">${filter==='todo'?'Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
   st.forEach(s=>{
     const v=statusOf(s),stg=stageOf(s.storeKey);
-    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+(s.lr?'<span class="chip c-lr">LITTLE RICK</span>':'')+(s.premium?'<span class="chip c-prem">PREMIUM</span>':'')+shopChip(v)+
+    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+(s.lr?'<span class="chip c-lr">LITTLE RICK</span>':'')+(s.premium?'<span class="chip c-prem">PREMIUM</span>':'')+shopChip(v)+portalChip(s.storeKey)+
       (stg!=='Prospect'?`<span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>`:'')+(scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:'');
     const ph=(s.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);
     const numStyle=v?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:(s.kind==='acct'?`background:${HEX[day]}`:s.kind==='walk'?'background:#4f46e5':'');
@@ -824,6 +828,7 @@ function drawSheet(){
   let o=`<div class="grab"></div><h2>${esc(s.name)}</h2><div class="sub">${esc(s.addr)}${s.contact?' · '+esc(s.contact):''}</div>
    <div class="chips" style="margin-top:6px"><span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>${scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:''}</div>`;
   if(tl.length){o+=`<details class="hist" ${tl.length?'open':''}><summary>History · ${tl.length} earlier visit${tl.length>1?'s':''}</summary>${tl.slice(0,6).map(e=>`<div class="hrow"><b class="s-${e.status}">${SL[e.status]}</b> · ${new Date(e.at).toLocaleDateString([],{month:'short',day:'numeric'})}${e.by?' · '+esc(e.by):''}${e.cases?` · ${e.cases} cs`:''}${e.bought?`<div class="m">${esc(e.bought)}</div>`:''}${(e.reasons||[]).length?`<div class="m">${esc(e.reasons.join(', '))}</div>`:''}${e.contactName?`<div class="m">${I('user')} ${esc(e.contactName)} ${esc(e.contactPhone||'')}</div>`:''}${e.notes?`<div class="m">“${esc(e.notes)}”</div>`:''}</div>`).join('')}</details>`}
+  o+=portalBlock(s.storeKey);
   const stx=P().length?sellThrough(s.storeKey):null;
   if(stx)o+=`<div class="stx">${I('chart')} Sells about <b>${Math.round(stx.perWeek)} cans/week</b> <span class="m">(last ${stx.days} days)</span></div>`;
   o+=`<div class="lab">Outcome</div><div class="outs">${['sold','no','fu','skip'].map(k=>`<button data-s="${k}" class="${draft.status===k?'on':''}">${k==='sold'?I('check')+' Sold':k==='no'?I('x')+' No sale':k==='fu'?I('refresh')+' Follow up':I('minus')+' Closed / skip'}</button>`).join('')}</div>`;
@@ -1001,6 +1006,9 @@ function renderSum(){
   const rs=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
   if(rs.length)o+=`<div class="sec"><h4>Top objections</h4>${rs.map(([r,n])=>`<div class="it">${esc(r)} <b style="float:right">${n}</b></div>`).join('')}</div>`;
   o+=sec('Closed / skipped','var(--skip)',rows.skip,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${v.notes?' — '+esc(v.notes):''}</div>`);
+  {const since=scope==='day'?null:'2026-11-09';const dayIso=D&&D.date?('2026-'+D.date.split('/').map(x=>x.padStart(2,'0')).join('-')):null;
+   const lk=new Set(Object.values(recs).filter(r=>r.shopify&&r.shopify.linked).map(r=>r.shopify.orderId));const po=(portal.orders||[]).filter(x=>!lk.has(x.id)).filter(x=>scope==='day'?String(x.at).slice(0,10)===dayIso:String(x.at).slice(0,10)>=since);
+   if(po.length)o+=`<div class="sec"><h4 style="color:#6d28d9">Portal reorders (IV-X Retailer) · ${po.length} · ${po.reduce((a,x)=>a+x.cases,0)} cs · ${money(po.reduce((a,x)=>a+x.total,0))}</h4>${po.map(x=>`<div class="it"><b>${esc(x.customer||'Retailer')}</b> — ${x.cases} cs · ${money(x.total)} <span class="m" style="float:right">${esc(md(x.at))} ${esc(x.name)}</span></div>`).join('')}</div>`}
   if(!done)o+=`<div class="empty">No check-ins yet${scope==='day'?' for '+D.d:''}. Results fill in as you check stores off.</div>`;
   o+=`<button class="save" id="copyr">Copy ${scope==='day'?D.d+"'s":"the week's"} report</button><a class="gbtn" style="background:#111;margin-top:10px" href="dashboard.html" target="_blank" rel="noopener">${I('chart')} Open manager dashboard</a>`;
   $('#sum').innerHTML=o;
@@ -1037,23 +1045,45 @@ function shopLines(r){const out=[];(r.items||[]).forEach(it=>{const p=P().find(x
   if(!out.length&&+r.cases>0&&parseFloat(r.orderTotal)>0)out.push({title:'IV-X cases'+(r.bought?' – '+r.bought:''),price:parseFloat(r.orderTotal)/(+r.cases),qty:+r.cases});return out}
 const shopSince=()=>S().shopifySince||'9999';
 function shopPendingSales(all){const me=myName()||'';return Object.values(recs).filter(r=>!r.deleted&&r.status==='sold'&&r.kind!=='payment'&&!(r.shopify&&r.shopify.orderId)&&shopLines(r).length&&(r.by||'')===me&&(all||String(r.at||'')>=shopSince()))}
-function shopPendingPays(){const me=myName()||'';return Object.values(recs).filter(p=>p.kind==='payment'&&!p.deleted&&!(p.shopify&&p.shopify.done)&&(p.by||'')===me).map(p=>{const s=Object.values(recs).find(r=>r.invoiceNo&&r.invoiceNo===p.invoiceNo&&r.kind!=='payment'&&r.shopify&&r.shopify.orderId);return s?{p,s}:null}).filter(Boolean)}
+function shopPendingPays(){const me=myName()||'';return Object.values(recs).filter(p=>p.kind==='payment'&&!p.deleted&&!(p.shopify&&p.shopify.done)&&(p.by||'')===me).map(p=>{const s=Object.values(recs).find(r=>r.invoiceNo&&r.invoiceNo===p.invoiceNo&&r.kind!=='payment'&&r.shopify&&r.shopify.orderId);return s&&!s.shopify.linked?{p,s}:null}).filter(Boolean)}
 function shopMark(r,patch){r.shopify=Object.assign({},r.shopify||{},patch);r.at=new Date().toISOString();recs[r.id]=r;if(!outbox.includes(r.id))outbox.push(r.id);persist()}
 async function shopPump(opts={}){
   if(shopBusy||!shopOn()||!navigator.onLine)return;shopBusy=true;let changed=false;
   try{
     for(const r of shopPendingSales(opts.all)){if(!opts.force&&shopTry[r.id]&&Date.now()-shopTry[r.id]<300000)continue;shopTry[r.id]=Date.now();
-      try{const d=await shopCall({action:'pushSale',rec:{id:r.id,invoiceNo:r.invoiceNo,orderTotal:r.orderTotal,paid:r.paid,terms:r.terms,dueDate:r.dueDate,payMethod:r.payMethod,by:r.by,notes:r.notes,freeCases:r.freeCases,freeCans:r.freeCans,discount:r.discount},
+      try{const d=await shopCall({action:'pushSale',rec:{id:r.id,at:r.createdAt||r.at,invoiceNo:r.invoiceNo,orderTotal:r.orderTotal,paid:r.paid,terms:r.terms,dueDate:r.dueDate,payMethod:r.payMethod,by:r.by,notes:r.notes,freeCases:r.freeCases,freeCans:r.freeCans,discount:r.discount},
           store:{name:r.store,address:r.address,phone:r.phone,storeKey:r.storeKey,kind:r.kind,contactName:r.contactName,contactPhone:r.contactPhone,city:/queens|astoria|long island|sunnyside|woodside|jackson|elmhurst|corona|maspeth/i.test(r.address||'')||['mon','tue'].includes(r.day)?'Queens':'New York'},lines:shopLines(r)});
-        shopMark(r,{orderId:d.orderId,orderName:d.orderName,url:d.adminUrl,at:new Date().toISOString(),err:'',warn:d.warning||''});changed=true}
+        shopMark(r,{orderId:d.orderId,orderName:d.orderName,url:d.adminUrl,at:new Date().toISOString(),err:'',warn:d.warning||'',linked:!!d.linked});changed=true}
       catch(e){r.shopify=Object.assign({},r.shopify||{},{err:String(e.message||e)});persist();changed=true}}
     for(const {p,s} of shopPendingPays()){if(!opts.force&&shopTry[p.id]&&Date.now()-shopTry[p.id]<300000)continue;shopTry[p.id]=Date.now();
       try{const full=invoiceBalance(s).bal<=0.005;await shopCall({action:'payment',orderId:s.shopify.orderId,amount:p.amount,method:p.method||p.payMethod||'Cash',full});shopMark(p,{done:true,err:''});changed=true}
       catch(e){p.shopify=Object.assign({},p.shopify||{},{err:String(e.message||e)});persist();changed=true}}
   }finally{shopBusy=false;if(changed){render();if(outbox.length)syncNow(true)}}
 }
+// ---- IV-X Retailer portal reorders (read-only) ----
+let portal=LS.get('portal',{at:0,orders:[]}),portalBusy=false;
+const pNorm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+async function portalPull(force){
+  if(portalBusy||!sb||!session||!navigator.onLine)return;if(!(S().shopifyAuto||(shopStatus&&shopStatus.ok)))return;
+  if(!force&&Date.now()-(portal.at||0)<600000)return;portalBusy=true;
+  try{const d=await shopCall({action:'portalOrders'});portal={at:Date.now(),orders:d.orders||[]};LS.set('portal',portal);render()}catch(e){portal.at=Date.now()-480000}finally{portalBusy=false}}
+function portalIndex(){ // storeKey -> orders (newest first)
+  if(portalIndex._at===portal.at&&portalIndex._n===Object.keys(recs).length)return portalIndex._m;
+  const dir=directory();GYMS.forEach(g=>{if(!dir[g.storeKey])dir[g.storeKey]={storeKey:g.storeKey,name:g.name}});
+  const byName=Object.values(dir).map(d=>[pNorm(d.name),d.storeKey]).filter(x=>x[0].length>=4);const m={};
+  (portal.orders||[]).forEach(o=>{let key=((o.customerTags||[]).find(t=>t.startsWith('ivxstore-'))||'').slice(9);
+    if(!key||!dir[key]){const n=pNorm(o.customer);const h=byName.find(([dn])=>dn===n||(Math.min(dn.length,n.length)>=8&&(dn.startsWith(n)||n.startsWith(dn))));key=h?h[1]:''}
+    const k=key||'?'+pNorm(o.customer);(m[k]=m[k]||[]).push(o)});
+  Object.values(m).forEach(a=>a.sort((x,y)=>String(y.at).localeCompare(String(x.at))));
+  portalIndex._at=portal.at;portalIndex._n=Object.keys(recs).length;portalIndex._m=m;return m}
+const portalFor=key=>(portalIndex()[key]||[]).filter(o=>!Object.values(recs).some(r=>r.shopify&&r.shopify.linked&&r.shopify.orderId===o.id));
+const md=iso=>new Date(iso).toLocaleDateString([],{month:'numeric',day:'numeric'});
+function portalChip(key){const o=portalFor(key)[0];return o?`<span class="chip c-portal">PORTAL ${esc(md(o.at))} · ${o.cases} CS</span>`:''}
+function portalBlock(key){const L=portalFor(key);if(!L.length)return'';
+  return `<details class="hist" open><summary>Reorders in IV-X Retailer · ${L.length}</summary>${L.slice(0,5).map(o=>`<div class="hrow"><b>${esc(o.name)}</b> · ${new Date(o.at).toLocaleDateString([],{month:'short',day:'numeric'})} · ${o.cases} cs · ${money(o.total)}<div class="m">${esc(o.items.map(i=>i.qty+'× '+i.title.replace(/\s*-\s*(ENERGY|ENDURE)\.\d+/i,'')).join(', '))}${o.fulfilled==='UNFULFILLED'?' · not delivered yet':''}</div></div>`).join('')}</details>`}
+
 function shopChip(v){if(!v||!v.shopify)return'';const s=v.shopify;
-  if(s.orderName)return`<a class="chip c-shop" href="${esc(s.url||'#')}" target="_blank" rel="noopener" data-stop>SHOPIFY ${esc(s.orderName)}</a>`;
+  if(s.orderName)return`<a class="chip c-shop" href="${esc(s.url||'#')}" target="_blank" rel="noopener" data-stop>${s.linked?'IN PORTAL':'SHOPIFY'} ${esc(s.orderName)}</a>`;
   if(s.err)return`<span class="chip c-shoperr" title="${esc(s.err)}">NOT IN SHOPIFY YET</span>`;return''}
 function shopBox(){const st=S(),on=!!st.shopifyAuto,ss=shopStatus;
   const pend=on?shopPendingSales(false).length:0,older=on?shopPendingSales(true).length-pend:0,errs=Object.values(recs).filter(r=>r.shopify&&r.shopify.err&&!r.shopify.orderId&&!r.deleted);
@@ -1194,7 +1224,7 @@ function renderGyms(){
     const ph=(g.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);const nd=DAYS.find(d=>d.k===g.near);
     o+=`<div class="st gym" data-gid="${esc(g.id)}"><div class="num" style="${v&&v.status?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:'background:#111;color:#fff'}">${v&&v.status?icon(v.status):I('users')}</div>
      <div><h3>${esc(g.name)}</h3><div class="addr">${esc(g.addr.replace(/, (New York|Long Island City|Astoria|Sunnyside|Woodside), NY$/,''))}${g.contact?' · '+esc(g.contact):''}</div>
-     <div class="chips"><span class="chip c-gym">${esc(g.type.toUpperCase())}</span>${nd?`<span class="chip" style="background:${HEX[nd.k]}1a;color:${HEX[nd.k]}">NEAR ${nd.d.toUpperCase()} ROUTE</span>`:''}${shopChip(v)}${v&&v.followUpDate&&v.status!=='sold'?`<span class="chip c-walk">${I('calendar')} ${esc(v.followUpDate.slice(5))}</span>`:''}</div>
+     <div class="chips"><span class="chip c-gym">${esc(g.type.toUpperCase())}</span>${nd?`<span class="chip" style="background:${HEX[nd.k]}1a;color:${HEX[nd.k]}">NEAR ${nd.d.toUpperCase()} ROUTE</span>`:''}${shopChip(v)}${portalChip(g.storeKey)}${v&&v.followUpDate&&v.status!=='sold'?`<span class="chip c-walk">${I('calendar')} ${esc(v.followUpDate.slice(5))}</span>`:''}</div>
      ${v&&v.status?resLine(v):''}
      <div class="acts"><a href="${navLink(g,'gym')}" target="_blank" rel="noopener">Navigate</a>${ph?`<a href="tel:${ph[0].replace(/-/g,'')}">Call</a>`:''}<a href="#" data-gopen>${v&&v.status?'Edit':'Check in'}</a></div></div></div>`});
   $('#v-gym').innerHTML=o;

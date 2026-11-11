@@ -58,8 +58,8 @@ async function products() {
 
 async function findOrCreateCustomer(store) {
   const tag = "ivxstore-" + q(store.storeKey).slice(0, 60);
-  const f = await gql(`query($q: String!) { customers(first: 1, query: $q) { nodes { id } } }`, { q: `tag:'${tag}'` });
-  if (f.customers.nodes.length) return f.customers.nodes[0].id;
+  const f = await gql(`query($q: String!) { customers(first: 1, query: $q) { nodes { id tags } } }`, { q: `tag:'${tag}'` });
+  if (f.customers.nodes.length) return { id: f.customers.nodes[0].id, portal: (f.customers.nodes[0].tags || []).includes("ivx-retailer") };
   // Reuse the store's IV-X Retailer portal account if it has one (no duplicate customers)
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const want = norm(store.name);
@@ -76,7 +76,7 @@ async function findOrCreateCustomer(store) {
     if (hit) {
       const a = await gql(`mutation($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { userErrors { message } } }`, { id: hit.id, tags: [tag, "IV-X Field"] });
       userErr(a.tagsAdd);
-      return hit.id;
+      return { id: hit.id, portal: true };
     }
   }
   const [first, ...rest] = String(store.contactName || "").trim().split(/\s+/);
@@ -90,7 +90,7 @@ async function findOrCreateCustomer(store) {
   };
   const c = await gql(`mutation($input: CustomerInput!) { customerCreate(input: $input) { customer { id } userErrors { field message } } }`, { input });
   userErr(c.customerCreate);
-  return c.customerCreate.customer.id;
+  return { id: c.customerCreate.customer.id, portal: false };
 }
 
 async function pushSale(b) {
@@ -105,7 +105,18 @@ async function pushSale(b) {
       ? { variantId: l.variantId, quantity: l.qty, priceOverride: money(l.price) }
       : { title: l.title, quantity: l.qty, originalUnitPriceWithCurrency: money(l.price), requiresShipping: false, taxable: false, sku: l.sku || undefined });
     if (!lines.length) throw new Error("No order lines to send");
-    const customerId = await findOrCreateCustomer(store);
+    const cust = await findOrCreateCustomer(store);
+    const customerId = cust.id;
+    // Already entered in IV-X Retailer? Link to that order instead of creating a second one.
+    if (cust.portal && rec.at) {
+      const when = new Date(rec.at).getTime(), day = 86400000;
+      const from = new Date(when - 2 * day).toISOString(), to = new Date(when + 2 * day).toISOString();
+      const num = customerId.split("/").pop();
+      const o = await gql(`query($q: String!) { orders(first: 20, query: $q) { nodes { id name legacyResourceId totalPriceSet { shopMoney { amount } } } } }`, { q: `customer_id:${num} AND tag:ivx-retailer AND created_at:>='${from}' AND created_at:<='${to}'` });
+      const want = Number(rec.orderTotal || 0);
+      const m = o.orders.nodes.find((x) => Math.abs(Number(x.totalPriceSet.shopMoney.amount) - want) < 0.01);
+      if (m) return { ...out(m, { id: "" }), linked: true };
+    }
     const input = {
       purchasingEntity: { customerId },
       lineItems: lines,
@@ -138,12 +149,26 @@ async function recordPayment(b) {
   if (!b.orderId) throw new Error("Missing order");
   if (b.full) {
     const r = await gql(`mutation($input: OrderMarkAsPaidInput!) { orderMarkAsPaid(input: $input) { order { id displayFinancialStatus } userErrors { field message } } }`, { input: { id: b.orderId } });
+    const pe = r.orderMarkAsPaid.userErrors || [];
+    if (pe.length && pe.every((e) => /paid/i.test(e.message))) return { status: "PAID" };
     userErr(r.orderMarkAsPaid);
     return { status: r.orderMarkAsPaid.order.displayFinancialStatus };
   }
   const r = await gql(`mutation($id: ID!, $amount: MoneyInput, $m: String) { orderCreateManualPayment(id: $id, amount: $amount, paymentMethodName: $m) { order { id displayFinancialStatus } userErrors { field message } } }`, { id: b.orderId, amount: money(b.amount), m: b.method || "Cash" });
   userErr(r.orderCreateManualPayment);
   return { status: r.orderCreateManualPayment.order.displayFinancialStatus };
+}
+
+async function portalOrders(b) {
+  const since = /^\d{4}-\d{2}-\d{2}/.test(b.since || "") ? b.since.slice(0, 10) : new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+  const d = await gql(`query($q: String!) { orders(first: 100, query: $q, sortKey: CREATED_AT, reverse: true) { nodes { id name createdAt tags displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount } } customer { id displayName tags } lineItems(first: 20) { nodes { title quantity } } } } }`, { q: `tag:ivx-retailer AND created_at:>='${since}'` });
+  return d.orders.nodes.map((o) => ({
+    id: o.id, name: o.name, at: o.createdAt, total: Number(o.totalPriceSet.shopMoney.amount || 0),
+    paid: o.displayFinancialStatus, fulfilled: o.displayFulfillmentStatus,
+    customer: o.customer ? o.customer.displayName : "", customerTags: o.customer ? o.customer.tags : [],
+    items: o.lineItems.nodes.map((l) => ({ title: l.title, qty: l.quantity })),
+    cases: o.lineItems.nodes.reduce((s, l) => s + (l.quantity || 0), 0),
+  }));
 }
 
 async function signedIn(req) {
@@ -167,6 +192,7 @@ Deno.serve(async (req) => {
     if (b.action === "ping") return reply({ ok: true, shop: await ping() });
     if (b.action === "products") return reply({ ok: true, products: await products() });
     if (b.action === "pushSale") return reply({ ok: true, ...(await pushSale(b)) });
+    if (b.action === "portalOrders") return reply({ ok: true, orders: await portalOrders(b) });
     if (b.action === "payment") return reply({ ok: true, ...(await recordPayment(b)) });
     return reply({ error: "Unknown action" }, 400);
   } catch (e) {
