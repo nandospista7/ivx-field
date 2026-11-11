@@ -60,6 +60,25 @@ async function findOrCreateCustomer(store) {
   const tag = "ivxstore-" + q(store.storeKey).slice(0, 60);
   const f = await gql(`query($q: String!) { customers(first: 1, query: $q) { nodes { id } } }`, { q: `tag:'${tag}'` });
   if (f.customers.nodes.length) return f.customers.nodes[0].id;
+  // Reuse the store's IV-X Retailer portal account if it has one (no duplicate customers)
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const want = norm(store.name);
+  if (want.length >= 4) {
+    const p = await gql(`query { customers(first: 100, query: "tag:ivx-retailer") { nodes { id displayName defaultAddress { company } } } }`);
+    const hit = p.customers.nodes.find((c) => {
+      for (const n of [norm(c.displayName), norm(c.defaultAddress && c.defaultAddress.company)]) {
+        if (!n) continue;
+        if (n === want) return true;
+        if (Math.min(n.length, want.length) >= 8 && (n.startsWith(want) || want.startsWith(n))) return true;
+      }
+      return false;
+    });
+    if (hit) {
+      const a = await gql(`mutation($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { userErrors { message } } }`, { id: hit.id, tags: [tag, "IV-X Field"] });
+      userErr(a.tagsAdd);
+      return hit.id;
+    }
+  }
   const [first, ...rest] = String(store.contactName || "").trim().split(/\s+/);
   const input = {
     firstName: first || store.name,
@@ -90,7 +109,7 @@ async function pushSale(b) {
     const input = {
       purchasingEntity: { customerId },
       lineItems: lines,
-      tags: [recTag, "IV-X Field", "Wholesale", store.kind === "gym" ? "Gym" : "Retail", "Terms: " + (rec.terms || "paid"), rec.by ? "Rep: " + q(rec.by) : ""].filter(Boolean),
+      tags: [recTag, "ivx-field", "IV-X Field", "wholesale", store.kind === "gym" ? "Gym" : "Retail", "Terms: " + (rec.terms || "paid"), rec.by ? "Rep: " + q(rec.by) : ""].filter(Boolean),
       note: [`IV-X Field sale ${rec.invoiceNo || ""}`, `Store: ${store.name} — ${store.address || ""}`, rec.by ? `Rep: ${rec.by}` : "", rec.terms ? `Terms: ${rec.terms}${rec.dueDate ? " (due " + rec.dueDate + ")" : ""}` : "", rec.notes ? `Notes: ${rec.notes}` : "", (Number(rec.freeCases) || Number(rec.freeCans) || Number(rec.discount)) ? `Promo given (not billed): ${rec.freeCases || 0} free cases, ${rec.freeCans || 0} free cans, $${rec.discount || 0} discount` : "", "Delivered in person by the field team."].filter(Boolean).join("\n"),
       poNumber: rec.invoiceNo || undefined,
       taxExempt: true,
