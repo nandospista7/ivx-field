@@ -126,6 +126,9 @@ textarea{min-height:70px;resize:vertical}
 .c-gym{background:#111;color:#fff}
 .st.gym .num .i{width:16px;height:16px}
 #v-gym{padding:0 14px 20px}#v-gym .prog,#v-gym .ctrl{padding-left:0;padding-right:0}#v-gym .ghead{padding-top:8px}
+.c-shop{background:#e3f5e1;color:#1f6b2b;text-decoration:none}.c-shoperr{background:#fde8e8;color:#b42318}
+.tgl{display:flex;gap:8px;align-items:center;font-weight:700;margin:10px 0 2px}.tgl input{width:20px;height:20px}
+.shrow{display:block;margin:8px 0}.shrow span{display:block;font-weight:700;font-size:13px;margin-bottom:3px}.shrow select{width:100%;padding:9px;border-radius:9px;border:1px solid #d9d5cc;background:#fff;font-size:14px}
 
 .gear{all:unset;cursor:pointer;font-size:18px;padding:2px 4px;margin-left:8px;color:#cfd2d8}
 .setbox{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 14px}
@@ -475,7 +478,7 @@ async function syncNow(quiet){
     (cfg||[]).forEach(x=>{if(String(x.key).startsWith('van:')&&!vanDirty.includes(x.key))vans[x.key]=x.value});LS.set('vans',vans);
     persist();lastOk=Date.now();lastErr='';$('#banner').classList.remove('on');
   }catch(e){lastErr=String(e.message||e);if(/JWT|token|auth/i.test(lastErr)){banner('Your sign-in expired — sign in again in Settings.')}else if(!quiet)banner('Couldn\'t reach the server. Check-ins are safe on this phone and will upload automatically. ('+lastErr+')')}
-  finally{syncing=false;syncLabel();render()}
+  finally{syncing=false;syncLabel();render();setTimeout(()=>shopPump(),300)}
 }
 function startRealtime(){if(!sb||rtChan)return;
   rtChan=sb.channel('checkins-live').on('postgres_changes',{event:'*',schema:'public',table:'checkins'},()=>{clearTimeout(rtTimer);rtTimer=setTimeout(()=>syncNow(true),1200)})
@@ -575,7 +578,7 @@ function renderRoute(){
   if(!st.length)o+=`<div class="empty">${filter==='todo'?'Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
   st.forEach(s=>{
     const v=statusOf(s),stg=stageOf(s.storeKey);
-    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+(s.lr?'<span class="chip c-lr">LITTLE RICK</span>':'')+(s.premium?'<span class="chip c-prem">PREMIUM</span>':'')+
+    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+(s.lr?'<span class="chip c-lr">LITTLE RICK</span>':'')+(s.premium?'<span class="chip c-prem">PREMIUM</span>':'')+shopChip(v)+
       (stg!=='Prospect'?`<span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>`:'')+(scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:'');
     const ph=(s.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);
     const numStyle=v?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:(s.kind==='acct'?`background:${HEX[day]}`:s.kind==='walk'?'background:#4f46e5':'');
@@ -1010,6 +1013,60 @@ function renderSum(){
 
 // ===================== settings tab =====================
 let confirmReset=false,setOpen=LS.get('setOpen',{});
+
+// ===================== Shopify (orders flow into your IV-X retail app) =====================
+let shopBusy=false,shopTry={},shopStatus=LS.get('shopStatus',null),shopProducts=null;
+const shopOn=()=>!!(sb&&session&&S().shopifyAuto);
+async function shopCall(body){if(!sb||!session)throw new Error('Sign in first');
+  const {data,error}=await sb.functions.invoke('shopify',{body});
+  if(error){let m=error.message||String(error);if(/not found|404|Failed to send/i.test(m))m='The Shopify bridge isn\'t installed in Supabase yet (see setup steps).';throw new Error(m)}
+  if(!data||data.ok===false||data.error)throw new Error((data&&data.error)||'No answer from Shopify');return data}
+function shopLines(r){const out=[];(r.items||[]).forEach(it=>{const p=P().find(x=>x.id===it.id)||{};if(+it.q>0)out.push({variantId:p.shopifyVariantId||'',sku:p.sku||'',title:(p.line?p.line+' ':'')+(it.n||p.name||'IV-X'),price:+it.p||+p.casePrice||0,qty:+it.q})});
+  if(!out.length&&+r.cases>0&&parseFloat(r.orderTotal)>0)out.push({title:'IV-X cases'+(r.bought?' – '+r.bought:''),price:parseFloat(r.orderTotal)/(+r.cases),qty:+r.cases});return out}
+const shopSince=()=>S().shopifySince||'9999';
+function shopPendingSales(all){const me=myName()||'';return Object.values(recs).filter(r=>!r.deleted&&r.status==='sold'&&r.kind!=='payment'&&!(r.shopify&&r.shopify.orderId)&&shopLines(r).length&&(r.by||'')===me&&(all||String(r.at||'')>=shopSince()))}
+function shopPendingPays(){const me=myName()||'';return Object.values(recs).filter(p=>p.kind==='payment'&&!p.deleted&&!(p.shopify&&p.shopify.done)&&(p.by||'')===me).map(p=>{const s=Object.values(recs).find(r=>r.invoiceNo&&r.invoiceNo===p.invoiceNo&&r.kind!=='payment'&&r.shopify&&r.shopify.orderId);return s?{p,s}:null}).filter(Boolean)}
+function shopMark(r,patch){r.shopify=Object.assign({},r.shopify||{},patch);r.at=new Date().toISOString();recs[r.id]=r;if(!outbox.includes(r.id))outbox.push(r.id);persist()}
+async function shopPump(opts={}){
+  if(shopBusy||!shopOn()||!navigator.onLine)return;shopBusy=true;let changed=false;
+  try{
+    for(const r of shopPendingSales(opts.all)){if(!opts.force&&shopTry[r.id]&&Date.now()-shopTry[r.id]<300000)continue;shopTry[r.id]=Date.now();
+      try{const d=await shopCall({action:'pushSale',rec:{id:r.id,invoiceNo:r.invoiceNo,orderTotal:r.orderTotal,paid:r.paid,terms:r.terms,dueDate:r.dueDate,payMethod:r.payMethod,by:r.by,notes:r.notes,freeCases:r.freeCases,freeCans:r.freeCans,discount:r.discount},
+          store:{name:r.store,address:r.address,phone:r.phone,storeKey:r.storeKey,kind:r.kind,contactName:r.contactName,contactPhone:r.contactPhone,city:/queens|astoria|long island|sunnyside|woodside|jackson|elmhurst|corona|maspeth/i.test(r.address||'')||['mon','tue'].includes(r.day)?'Queens':'New York'},lines:shopLines(r)});
+        shopMark(r,{orderId:d.orderId,orderName:d.orderName,url:d.adminUrl,at:new Date().toISOString(),err:'',warn:d.warning||''});changed=true}
+      catch(e){r.shopify=Object.assign({},r.shopify||{},{err:String(e.message||e)});persist();changed=true}}
+    for(const {p,s} of shopPendingPays()){if(!opts.force&&shopTry[p.id]&&Date.now()-shopTry[p.id]<300000)continue;shopTry[p.id]=Date.now();
+      try{const full=invoiceBalance(s).bal<=0.005;await shopCall({action:'payment',orderId:s.shopify.orderId,amount:p.amount,method:p.method||p.payMethod||'Cash',full});shopMark(p,{done:true,err:''});changed=true}
+      catch(e){p.shopify=Object.assign({},p.shopify||{},{err:String(e.message||e)});persist();changed=true}}
+  }finally{shopBusy=false;if(changed){render();if(outbox.length)syncNow(true)}}
+}
+function shopChip(v){if(!v||!v.shopify)return'';const s=v.shopify;
+  if(s.orderName)return`<a class="chip c-shop" href="${esc(s.url||'#')}" target="_blank" rel="noopener" data-stop>SHOPIFY ${esc(s.orderName)}</a>`;
+  if(s.err)return`<span class="chip c-shoperr" title="${esc(s.err)}">NOT IN SHOPIFY YET</span>`;return''}
+function shopBox(){const st=S(),on=!!st.shopifyAuto,ss=shopStatus;
+  const pend=on?shopPendingSales(false).length:0,older=on?shopPendingSales(true).length-pend:0,errs=Object.values(recs).filter(r=>r.shopify&&r.shopify.err&&!r.shopify.orderId&&!r.deleted);
+  return `<p>Every sale you save here is sent to Shopify as an order, with the store as the customer, so it lands in your IV-X retail app automatically. Payments you record here mark the order paid there too.</p>
+   <div class="msg">${ss?(ss.ok?I('check')+' Connected to <b>'+esc(ss.name)+'</b>':I('alert')+' '+esc(ss.err)):'Not tested yet'}${ss&&ss.at?' · '+new Date(ss.at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):''}</div>
+   <label class="tgl"><input type="checkbox" id="shauto" ${on?'checked':''}> Send sales to Shopify automatically (whole team)</label>
+   ${on?`<div class="m" style="margin:6px 0">Sending sales from ${esc(new Date(st.shopifySince).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))} on.${pend?' '+pend+' waiting.':''}${older?` ${older} earlier sale${older>1?'s':''} of yours not in Shopify.`:''}</div>`:''}
+   ${errs.length?`<div class="msg" style="color:var(--no)">${I('alert')} ${errs.length} sale${errs.length>1?'s':''} couldn't be sent: ${esc(errs[0].shopify.err)}</div>`:''}
+   <div class="btnrow"><button class="btn2" id="shtest">Test connection</button>${on?'<button class="btn2" id="shsend">Send now</button>':''}</div>
+   ${on&&older?`<div class="btnrow"><button class="btn2" id="shold">Also send my ${older} earlier sale${older>1?'s':''}</button></div><div class="m">Only do this if they aren't already in your retail app, or they'll be in there twice.</div>`:''}
+   <div class="lab">Match your flavors to Shopify products</div>
+   <div class="m">So orders use your real Shopify products and inventory. Unmatched flavors still go through as custom items.</div>
+   <div id="shmap">${shopProducts?P().map((p,i)=>`<label class="shrow"><span>${esc(p.name)}</span><select data-shv="${i}"><option value="">Custom item (no inventory)</option>${shopProducts.map(v=>`<option value="${esc(v.variantId)}" ${p.shopifyVariantId===v.variantId?'selected':''}>${esc(v.title)}${v.sku?' · '+esc(v.sku):''} · $${v.price}${v.inventory!=null?' · '+v.inventory+' in stock':''}</option>`).join('')}</select></label>`).join(''):`<div class="m" style="margin-top:6px">${P().filter(p=>p.shopifyVariantId).length} of ${P().length} flavors matched.</div>`}</div>
+   <div class="btnrow">${shopProducts?'<button class="btn2 dark" id="shmsave">Save matches</button>':'<button class="btn2" id="shload">Load Shopify products</button>'}</div>`}
+function bindShop(g){
+  if(!g('shtest'))return;
+  g('shtest').onclick=async()=>{g('shtest').textContent='Testing…';try{const d=await shopCall({action:'ping'});shopStatus={ok:true,name:d.shop.name,at:Date.now()}}catch(e){shopStatus={ok:false,err:String(e.message||e),at:Date.now()}}LS.set('shopStatus',shopStatus);setOpen.shop=true;renderSet()};
+  g('shauto').onchange=()=>{const on=g('shauto').checked;config.settings=Object.assign({},config.settings,{shopifyAuto:on,shopifySince:on?(S().shopifySince&&S().shopifyAuto?S().shopifySince:new Date().toISOString()):S().shopifySince});setOpen.shop=true;saveConfig();if(on)setTimeout(()=>shopPump({force:true}),500)};
+  if(g('shsend'))g('shsend').onclick=async()=>{g('shsend').textContent='Sending…';await shopPump({force:true});setOpen.shop=true;renderSet();toast('Shopify is up to date')};
+  if(g('shold'))g('shold').onclick=async()=>{if(!confirm2(g('shold'),'Tap again to send them'))return;g('shold').textContent='Sending…';await shopPump({force:true,all:true});setOpen.shop=true;renderSet()};
+  if(g('shload'))g('shload').onclick=async()=>{g('shload').textContent='Loading…';try{const d=await shopCall({action:'products'});shopProducts=d.products;
+      P().forEach(p=>{if(p.shopifyVariantId)return;const n=String(p.name||'').toLowerCase();const m=shopProducts.filter(v=>v.title.toLowerCase().includes(n));if(m.length===1)p.shopifyVariantId=m[0].variantId});}catch(e){toast(String(e.message||e))}setOpen.shop=true;renderSet()};
+  if(g('shmsave'))g('shmsave').onclick=()=>{document.querySelectorAll('[data-shv]').forEach(s=>{const p=P()[+s.dataset.shv];const v=shopProducts.find(x=>x.variantId===s.value);p.shopifyVariantId=s.value;if(v){p.sku=v.sku||p.sku||''}});shopProducts=null;setOpen.shop=true;saveConfig()};
+}
+
 function renderSet(){
   const u=syncUrl();
   const appLink=location.origin+location.pathname;
@@ -1024,6 +1081,7 @@ function renderSet(){
   o+=box('prod',I('box')+'Products & prices',`<p>Your flavors. Powers the tap-to-order form, order totals, store margin and sample cost. Saved for the whole team.</p>
    <div id="plist">${pr.map((x,i)=>`<div class="prow"><input data-pi="${i}" data-k="name" type="text" placeholder="Flavor" value="${esc(x.name)}"><div class="row3"><label>Case $<input data-pi="${i}" data-k="casePrice" type="number" inputmode="decimal" value="${esc(x.casePrice??'')}"></label><label>Cans/case<input data-pi="${i}" data-k="unitsPerCase" type="number" inputmode="numeric" value="${esc(x.unitsPerCase??'')}"></label><label>Shelf $<input data-pi="${i}" data-k="srp" type="number" inputmode="decimal" value="${esc(x.srp??'')}"></label></div><button class="tx2" data-del="${i}">Remove</button></div>`).join('')}</div>
    <div class="btnrow"><button class="btn2" id="padd">+ Add flavor</button><button class="btn2 dark" id="psave">Save products</button></div>`);
+  if(sb)o+=box('shop',I('link')+'Shopify',shopBox());
   o+=box('pitch',I('message')+'Pitch kit',`<p>Shows on the Pitch tab and pops up when you tap a no-sale reason. Use {margin}, {unitCost} and {srp} to fill in numbers from your price list. Edit the [bracketed] parts before you go out.</p>
    <div class="lab">Sell sheet link (PDF, Drive, Canva…)</div><input id="ssu" type="text" placeholder="https://…" value="${esc(pi.sellSheetUrl||'')}">
    <div class="lab">Talking points (one per line)</div><textarea id="pts" rows="7">${esc((pi.points||[]).join('\n'))}</textarea>
@@ -1042,6 +1100,7 @@ function renderSet(){
   $('#v-set').innerHTML=o;
   document.querySelectorAll('#v-set details').forEach(d=>d.ontoggle=()=>{setOpen[d.dataset.id]=d.open;LS.set('setOpen',setOpen)});
   const g=id=>document.getElementById(id);
+  bindShop(g);
   g('nm').onchange=()=>{LS.set('name',g('nm').value.trim());toast('Name saved')};
   if(g('snow'))g('snow').onclick=async()=>{await syncNow();renderSet()};
   if(g('sout'))g('sout').onclick=async()=>{if(outbox.length&&!confirm2(g('sout'),`Tap again — ${outbox.length} not uploaded yet`))return;stopRealtime();try{await sb.auth.signOut()}catch(e){}session=null;renderSet();showLogin('Signed out.')};
@@ -1123,7 +1182,7 @@ function renderGyms(){
     const ph=(g.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);const nd=DAYS.find(d=>d.k===g.near);
     o+=`<div class="st gym" data-gid="${esc(g.id)}"><div class="num" style="${v&&v.status?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:'background:#111;color:#fff'}">${v&&v.status?icon(v.status):I('users')}</div>
      <div><h3>${esc(g.name)}</h3><div class="addr">${esc(g.addr.replace(/, (New York|Long Island City|Astoria|Sunnyside|Woodside), NY$/,''))}${g.contact?' · '+esc(g.contact):''}</div>
-     <div class="chips"><span class="chip c-gym">${esc(g.type.toUpperCase())}</span>${nd?`<span class="chip" style="background:${HEX[nd.k]}1a;color:${HEX[nd.k]}">NEAR ${nd.d.toUpperCase()} ROUTE</span>`:''}${v&&v.followUpDate&&v.status!=='sold'?`<span class="chip c-walk">${I('calendar')} ${esc(v.followUpDate.slice(5))}</span>`:''}</div>
+     <div class="chips"><span class="chip c-gym">${esc(g.type.toUpperCase())}</span>${nd?`<span class="chip" style="background:${HEX[nd.k]}1a;color:${HEX[nd.k]}">NEAR ${nd.d.toUpperCase()} ROUTE</span>`:''}${shopChip(v)}${v&&v.followUpDate&&v.status!=='sold'?`<span class="chip c-walk">${I('calendar')} ${esc(v.followUpDate.slice(5))}</span>`:''}</div>
      ${v&&v.status?resLine(v):''}
      <div class="acts"><a href="${navLink(g,'gym')}" target="_blank" rel="noopener">Navigate</a>${ph?`<a href="tel:${ph[0].replace(/-/g,'')}">Call</a>`:''}<a href="#" data-gopen>${v&&v.status?'Edit':'Check in'}</a></div></div></div>`});
   $('#v-gym').innerHTML=o;
