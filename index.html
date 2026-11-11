@@ -1254,7 +1254,9 @@ $('#seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{filter=b.dataset.
 $('#mapt').onclick=()=>{mapOn=!mapOn;$('#mapbox').classList.toggle('on',mapOn);$('#mapt').textContent=mapOn?'Hide map':'Map';renderRoute()};
 let deferredPrompt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=$('#install');b.innerHTML=I('download')+' Add IV-X Field to your home screen — <b id="ib">Install</b>';b.classList.add('on');$('#ib').onclick=()=>{deferredPrompt.prompt();deferredPrompt=null;b.classList.remove('on')}});
-if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('serviceWorker' in navigator&&location.protocol==='https:'){const hadSW=!!navigator.serviceWorker.controller;let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(hadSW&&!reloaded&&!(cur||document.querySelector('.sheet.on'))){reloaded=true;location.reload()}});
+  navigator.serviceWorker.register('sw.js').then(r=>{r.update().catch(()=>{});document.addEventListener('visibilitychange',()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{})}
 render();boot();if(!LS.get('welcomed',false))showWelcome();
 
 </script>
