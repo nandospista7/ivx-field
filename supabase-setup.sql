@@ -123,13 +123,15 @@ exception when duplicate_object then null; when undefined_object then null; end 
 
 -- ---------- shelf photos & signatures ----------
 insert into storage.buckets (id, name, public)
-values ('photos', 'photos', true)
+values ('photos', 'photos', false)
 on conflict (id) do nothing;
 
 drop policy if exists "team uploads photos" on storage.objects;
 drop policy if exists "team replaces photos" on storage.objects;
 create policy "team uploads photos"  on storage.objects for insert to authenticated with check (bucket_id = 'photos');
 create policy "team replaces photos" on storage.objects for update to authenticated using (bucket_id = 'photos');
+drop policy if exists "team views photos" on storage.objects;
+create policy "team views photos"    on storage.objects for select to authenticated using (bucket_id = 'photos');
 
 -- Done. Next: Authentication → Sign In / Providers → turn OFF "Allow new users to sign up",
 -- then Authentication → Users → Add user → Create new user for each teammate (tick "Auto Confirm User").
