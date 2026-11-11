@@ -482,7 +482,7 @@ async function syncNow(quiet){
     (cfg||[]).forEach(x=>{if(String(x.key).startsWith('van:')&&!vanDirty.includes(x.key))vans[x.key]=x.value});LS.set('vans',vans);
     persist();lastOk=Date.now();lastErr='';$('#banner').classList.remove('on');
   }catch(e){lastErr=String(e.message||e);if(/JWT|token|auth/i.test(lastErr)){banner('Your sign-in expired — sign in again in Settings.')}else if(!quiet)banner('Couldn\'t reach the server. Check-ins are safe on this phone and will upload automatically. ('+lastErr+')')}
-  finally{syncing=false;syncLabel();render();setTimeout(()=>{shopPump();portalPull()},300)}
+  finally{syncing=false;syncLabel();render();setTimeout(()=>{relinkOnce();shopPump();portalPull()},300)}
 }
 function startRealtime(){if(!sb||rtChan)return;
   rtChan=sb.channel('checkins-live').on('postgres_changes',{event:'*',schema:'public',table:'checkins'},()=>{clearTimeout(rtTimer);rtTimer=setTimeout(()=>syncNow(true),1200)})
@@ -1053,18 +1053,22 @@ async function shopPump(opts={}){
     for(const r of shopPendingSales(opts.all)){if(!opts.force&&shopTry[r.id]&&Date.now()-shopTry[r.id]<300000)continue;shopTry[r.id]=Date.now();
       try{const d=await shopCall({action:'pushSale',rec:{id:r.id,at:r.createdAt||r.at,invoiceNo:r.invoiceNo,orderTotal:r.orderTotal,paid:r.paid,terms:r.terms,dueDate:r.dueDate,payMethod:r.payMethod,by:r.by,notes:r.notes,freeCases:r.freeCases,freeCans:r.freeCans,discount:r.discount},
           store:{name:r.store,address:r.address,phone:r.phone,storeKey:r.storeKey,kind:r.kind,contactName:r.contactName,contactPhone:r.contactPhone,city:/queens|astoria|long island|sunnyside|woodside|jackson|elmhurst|corona|maspeth/i.test(r.address||'')||['mon','tue'].includes(r.day)?'Queens':'New York'},lines:shopLines(r)});
-        shopMark(r,{orderId:d.orderId,orderName:d.orderName,url:d.adminUrl,at:new Date().toISOString(),err:'',warn:d.warning||'',linked:!!d.linked});changed=true}
+        shopMark(r,{orderId:d.orderId,orderName:d.orderName,url:d.adminUrl,at:new Date().toISOString(),err:'',warn:d.warning||'',linked:!!d.linked,draft:!!d.draft});changed=true}
       catch(e){r.shopify=Object.assign({},r.shopify||{},{err:String(e.message||e)});persist();changed=true}}
     for(const {p,s} of shopPendingPays()){if(!opts.force&&shopTry[p.id]&&Date.now()-shopTry[p.id]<300000)continue;shopTry[p.id]=Date.now();
       try{const full=invoiceBalance(s).bal<=0.005;await shopCall({action:'payment',orderId:s.shopify.orderId,amount:p.amount,method:p.method||p.payMethod||'Cash',full});shopMark(p,{done:true,err:''});changed=true}
       catch(e){p.shopify=Object.assign({},p.shopify||{},{err:String(e.message||e)});persist();changed=true}}
   }finally{shopBusy=false;if(changed){render();if(outbox.length)syncNow(true)}}
 }
+// one-time: field sales sent on 11/11 that were already entered in IV-X Retailer -> point them at the portal order
+const RELINK_1111={'#1731':['gid://shopify/Order/19093297135784','#1728','orders/19093297135784',0],'#1732':['gid://shopify/DraftOrder/1625360629928','#D66','draft_orders/1625360629928',1],'#1733':['gid://shopify/DraftOrder/1625364365480','#D67','draft_orders/1625364365480',1],'#1734':['gid://shopify/DraftOrder/1625480036520','#D68','draft_orders/1625480036520',1],'#1735':['gid://shopify/DraftOrder/1625486950568','#D69','draft_orders/1625486950568',1],'#1736':['gid://shopify/DraftOrder/1625490981032','#D70','draft_orders/1625490981032',1]};
+function relinkOnce(){let n=0;Object.values(recs).forEach(r=>{const s=r.shopify;const m=s&&!s.linked&&RELINK_1111[s.orderName];if(!m)return;
+  shopMark(r,{orderId:m[0],orderName:m[1],url:'https://admin.shopify.com/store/iiubu5-m1/'+m[2],linked:true,draft:!!m[3],dup:s.orderName,err:''});n++});if(n){persist();syncNow(true)}}
 // ---- IV-X Retailer portal reorders (read-only) ----
 let portal=LS.get('portal',{at:0,orders:[]}),portalBusy=false;
 const pNorm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 async function portalPull(force){
-  if(portalBusy||!sb||!session||!navigator.onLine)return;if(!(S().shopifyAuto||(shopStatus&&shopStatus.ok)))return;
+  if(portalBusy||!sb||!session||!navigator.onLine)return;
   if(!force&&Date.now()-(portal.at||0)<600000)return;portalBusy=true;
   try{const d=await shopCall({action:'portalOrders'});portal={at:Date.now(),orders:d.orders||[]};LS.set('portal',portal);render()}catch(e){portal.at=Date.now()-480000}finally{portalBusy=false}}
 function portalIndex(){ // storeKey -> orders (newest first)
@@ -1078,9 +1082,9 @@ function portalIndex(){ // storeKey -> orders (newest first)
   portalIndex._at=portal.at;portalIndex._n=Object.keys(recs).length;portalIndex._m=m;return m}
 const portalFor=key=>(portalIndex()[key]||[]).filter(o=>!Object.values(recs).some(r=>r.shopify&&r.shopify.linked&&r.shopify.orderId===o.id));
 const md=iso=>new Date(iso).toLocaleDateString([],{month:'numeric',day:'numeric'});
-function portalChip(key){const o=portalFor(key)[0];return o?`<span class="chip c-portal">PORTAL ${esc(md(o.at))} · ${o.cases} CS</span>`:''}
+function portalChip(key){const o=portalFor(key)[0];return o?`<span class="chip c-portal">PORTAL ${esc(md(o.at))} · ${o.cases} CS${o.draft?' · UNPAID':''}</span>`:''}
 function portalBlock(key){const L=portalFor(key);if(!L.length)return'';
-  return `<details class="hist" open><summary>Reorders in IV-X Retailer · ${L.length}</summary>${L.slice(0,5).map(o=>`<div class="hrow"><b>${esc(o.name)}</b> · ${new Date(o.at).toLocaleDateString([],{month:'short',day:'numeric'})} · ${o.cases} cs · ${money(o.total)}<div class="m">${esc(o.items.map(i=>i.qty+'× '+i.title.replace(/\s*-\s*(ENERGY|ENDURE)\.\d+/i,'')).join(', '))}${o.fulfilled==='UNFULFILLED'?' · not delivered yet':''}</div></div>`).join('')}</details>`}
+  return `<details class="hist" open><summary>Reorders in IV-X Retailer · ${L.length}</summary>${L.slice(0,5).map(o=>`<div class="hrow"><b>${esc(o.name)}</b> · ${new Date(o.at).toLocaleDateString([],{month:'short',day:'numeric'})} · ${o.cases} cs · ${money(o.total)}<div class="m">${esc(o.items.map(i=>i.qty+'× '+i.title.replace(/\s*-\s*(ENERGY|ENDURE)\.\d+/i,'')).join(', '))}${o.draft?' · invoice sent, not paid yet':o.fulfilled==='UNFULFILLED'?' · not delivered yet':''}</div></div>`).join('')}</details>`}
 
 function shopChip(v){if(!v||!v.shopify)return'';const s=v.shopify;
   if(s.orderName)return`<a class="chip c-shop" href="${esc(s.url||'#')}" target="_blank" rel="noopener" data-stop>${s.linked?'IN PORTAL':'SHOPIFY'} ${esc(s.orderName)}</a>`;

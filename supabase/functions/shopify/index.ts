@@ -64,15 +64,22 @@ async function findOrCreateCustomer(store) {
   const norm = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const want = norm(store.name);
   if (want.length >= 4) {
-    const p = await gql(`query { customers(first: 100, query: "tag:ivx-retailer") { nodes { id displayName defaultAddress { company } } } }`);
-    const hit = p.customers.nodes.find((c) => {
-      for (const n of [norm(c.displayName), norm(c.defaultAddress && c.defaultAddress.company)]) {
-        if (!n) continue;
-        if (n === want) return true;
-        if (Math.min(n.length, want.length) >= 8 && (n.startsWith(want) || want.startsWith(n))) return true;
-      }
-      return false;
-    });
+    const p = await gql(`query { customers(first: 100, query: "tag:ivx-retailer") { nodes { id displayName defaultAddress { company address1 } } } }`);
+    // address words that tell two same-name stores apart (e.g. "34th", "steinway")
+    const toks = String(store.address || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => /^\d+(st|nd|rd|th)$/.test(w) || (/^[a-z]{4,}$/.test(w) && !["avenue", "street", "blvd", "boulevard", "astoria", "queens", "york", "states", "united", "road", "place"].includes(w)));
+    const cands = [];
+    for (const c of p.customers.nodes) {
+      const names = [norm(c.displayName), norm(c.defaultAddress && c.defaultAddress.company)].filter(Boolean);
+      const exact = names.some((n) => n === want);
+      const loose = names.some((n) => Math.min(n.length, want.length) >= 8 && (n.includes(want) || want.includes(n)));
+      if (!exact && !loose) continue;
+      const hay = names.join(" ") + " " + norm(c.defaultAddress && c.defaultAddress.address1);
+      cands.push({ c, exact, score: toks.filter((w) => hay.includes(w)).length });
+    }
+    cands.sort((a, b) => (b.exact - a.exact) || (b.score - a.score));
+    let hit = null;
+    if (cands.length === 1 && (cands[0].exact || cands[0].score > 0 || !toks.length || Math.min(want.length, norm(cands[0].c.displayName).length) >= 12)) hit = cands[0].c;
+    else if (cands.length > 1 && (cands[0].exact && !cands[1].exact || cands[0].score > cands[1].score)) hit = cands[0].c;
     if (hit) {
       const a = await gql(`mutation($id: ID!, $tags: [String!]!) { tagsAdd(id: $id, tags: $tags) { userErrors { message } } }`, { id: hit.id, tags: [tag, "IV-X Field"] });
       userErr(a.tagsAdd);
@@ -108,14 +115,20 @@ async function pushSale(b) {
     const cust = await findOrCreateCustomer(store);
     const customerId = cust.id;
     // Already entered in IV-X Retailer? Link to that order instead of creating a second one.
-    if (cust.portal && rec.at) {
-      const when = new Date(rec.at).getTime(), day = 86400000;
-      const from = new Date(when - 2 * day).toISOString(), to = new Date(when + 2 * day).toISOString();
+    if (cust.portal) {
+      const when = new Date(rec.at || Date.now()).getTime(), day = 86400000;
+      const from = new Date(when - 3 * day).toISOString(), to = new Date(when + 3 * day).toISOString();
       const num = customerId.split("/").pop();
       const o = await gql(`query($q: String!) { orders(first: 20, query: $q) { nodes { id name legacyResourceId totalPriceSet { shopMoney { amount } } } } }`, { q: `customer_id:${num} AND tag:ivx-retailer AND created_at:>='${from}' AND created_at:<='${to}'` });
       const want = Number(rec.orderTotal || 0);
       const m = o.orders.nodes.find((x) => Math.abs(Number(x.totalPriceSet.shopMoney.amount) - want) < 0.01);
       if (m) return { ...out(m, { id: "" }), linked: true };
+      const dq = await gql(`query($q: String!) { draftOrders(first: 20, query: $q) { nodes { id name legacyResourceId status totalPriceSet { shopMoney { amount } } order { id name legacyResourceId } } } }`, { q: `customer_id:${num} AND tag:ivx-retailer` });
+      const dm = dq.draftOrders.nodes.find((x) => Math.abs(Number(x.totalPriceSet.shopMoney.amount) - want) < 0.01);
+      if (dm) {
+        if (dm.order) return { ...out(dm.order, { id: dm.id }), linked: true };
+        return { orderId: dm.id, orderName: dm.name, draftId: dm.id, linked: true, draft: true, adminUrl: `https://admin.shopify.com/store/${shop().replace(/\.myshopify\.com$/, "")}/draft_orders/${dm.legacyResourceId}` };
+      }
     }
     const input = {
       purchasingEntity: { customerId },
@@ -162,13 +175,21 @@ async function recordPayment(b) {
 async function portalOrders(b) {
   const since = /^\d{4}-\d{2}-\d{2}/.test(b.since || "") ? b.since.slice(0, 10) : new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
   const d = await gql(`query($q: String!) { orders(first: 100, query: $q, sortKey: CREATED_AT, reverse: true) { nodes { id name createdAt tags displayFinancialStatus displayFulfillmentStatus totalPriceSet { shopMoney { amount } } customer { id displayName tags } lineItems(first: 20) { nodes { title quantity } } } } }`, { q: `tag:ivx-retailer AND created_at:>='${since}'` });
-  return d.orders.nodes.map((o) => ({
+  const dr = await gql(`query($q: String!) { draftOrders(first: 100, query: $q, sortKey: UPDATED_AT, reverse: true) { nodes { id name createdAt status totalPriceSet { shopMoney { amount } } customer { id displayName tags } lineItems(first: 20) { nodes { title quantity } } } } }`, { q: `tag:ivx-retailer AND created_at:>='${since}'` });
+  const drafts = dr.draftOrders.nodes.filter((o) => o.status !== "COMPLETED").map((o) => ({
+    id: o.id, name: o.name, at: o.createdAt, total: Number(o.totalPriceSet.shopMoney.amount || 0), draft: true,
+    paid: o.status === "INVOICE_SENT" ? "INVOICE_SENT" : "OPEN", fulfilled: "UNFULFILLED",
+    customer: o.customer ? o.customer.displayName : "", customerTags: o.customer ? o.customer.tags : [],
+    items: o.lineItems.nodes.map((l) => ({ title: l.title, qty: l.quantity })),
+    cases: o.lineItems.nodes.reduce((s, l) => s + (l.quantity || 0), 0),
+  }));
+  return drafts.concat(d.orders.nodes.map((o) => ({
     id: o.id, name: o.name, at: o.createdAt, total: Number(o.totalPriceSet.shopMoney.amount || 0),
     paid: o.displayFinancialStatus, fulfilled: o.displayFulfillmentStatus,
     customer: o.customer ? o.customer.displayName : "", customerTags: o.customer ? o.customer.tags : [],
     items: o.lineItems.nodes.map((l) => ({ title: l.title, qty: l.quantity })),
     cases: o.lineItems.nodes.reduce((s, l) => s + (l.quantity || 0), 0),
-  }));
+  }))).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 
 async function signedIn(req) {
