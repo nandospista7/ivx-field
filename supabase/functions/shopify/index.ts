@@ -128,12 +128,15 @@ async function recordPayment(b) {
 }
 
 async function signedIn(req) {
+  // Confirms the caller is a signed-in IV-X Field user (works with new and legacy Supabase keys)
   const auth = req.headers.get("Authorization") || "";
-  if (!/^Bearer\s+\S+/.test(auth)) return false;
-  const url = env("SUPABASE_URL"), key = env("SUPABASE_ANON_KEY");
-  if (!url || !key) return true; // platform JWT check already ran
+  const m = auth.match(/^Bearer\s+(\S+)/);
+  if (!m || m[1].split(".").length !== 3) return false; // needs a user session token, not just the public key
+  const url = env("SUPABASE_URL");
+  const key = req.headers.get("apikey") || env("SUPABASE_ANON_KEY");
+  if (!url || !key) return false;
   const r = await fetch(url + "/auth/v1/user", { headers: { Authorization: auth, apikey: key } }).catch(() => null);
-  return !r || (r.status !== 401 && r.status !== 403);
+  return !!(r && r.ok);
 }
 
 Deno.serve(async (req) => {

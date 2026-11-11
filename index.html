@@ -1018,9 +1018,14 @@ let confirmReset=false,setOpen=LS.get('setOpen',{});
 let shopBusy=false,shopTry={},shopStatus=LS.get('shopStatus',null),shopProducts=null;
 const shopOn=()=>!!(sb&&session&&S().shopifyAuto);
 async function shopCall(body){if(!sb||!session)throw new Error('Sign in first');
-  let last='';for(const fn of ['shopify','iv-x-field']){
+  let notFound=0;for(const fn of ['shopify','iv-x-field']){
     const {data,error}=await sb.functions.invoke(fn,{body});
-    if(error){last=error.message||String(error);if(/not found|404|Failed to send/i.test(last))continue;throw new Error(last)}
+    if(error){const res=error.context;let st=res&&res.status,msg='';
+      if(res&&typeof res.text==='function'){try{const tx=await res.clone().text();try{const j=JSON.parse(tx);msg=j.error||j.message||j.msg||tx}catch(e){msg=tx}}catch(e){}}
+      if(st===404||/not found/i.test(msg)&&!st){notFound++;continue}
+      if(!st&&/Failed to send|fetch/i.test(error.message||'')){notFound++;continue}
+      if(st===401)throw new Error('Supabase blocked the request (401'+(msg?': '+String(msg).slice(0,120):'')+'). In Supabase → Edge Functions → '+fn+' → Details, turn OFF "Verify JWT" and save, then make sure the latest code is deployed.');
+      throw new Error('"'+fn+'" error '+(st||'')+(msg?': '+String(msg).slice(0,200):': '+(error.message||'')))}
     if(data&&data.ok===true)return data;
     if(data&&data.error)throw new Error(data.error);
     throw new Error('The "'+fn+'" function in Supabase doesn\'t have the IV-X Shopify code in it. Open it in Supabase, replace the code with the file from the setup link, and deploy again.')}
