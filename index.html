@@ -245,6 +245,7 @@ input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="qr.js"></script>
+<script src="review.js"></script>
 <script>
 let PLAN=(()=>{try{return JSON.parse(localStorage.getItem('ivx_plan')||'null')}catch(e){return null}})()||{};
 let GYMS=(()=>{try{return JSON.parse(localStorage.getItem('ivx_gyms')||'null')}catch(e){return null}})()||[];
@@ -495,6 +496,7 @@ function startRealtime(){if(!sb||rtChan)return;
 function stopRealtime(){if(rtChan){try{sb.removeChannel(rtChan)}catch(e){}rtChan=null;rtLive=false}}
 function saveRec(r,msg){
   r.at=new Date().toISOString();r.by=myName()||'';if(!r.storeKey)r.storeKey=storeKeyOf(r.store,r.address);
+  {const prev=recs[r.id];if(r.status&&r.kind!=='payment'){r.visitAt=(prev&&prev.status&&prev.visitAt)?prev.visitAt:(prev&&prev.status?(prev.visitAt||prev.at):r.at)}}
   if(syncing&&outbox.includes(r.id))r._dirtyAfter=true;
   recs[r.id]=r;if(!outbox.includes(r.id))outbox.push(r.id);persist();render();
   toast(msg||(syncUrl()?(navigator.onLine?'Saved':'Saved — will upload when online'):'Saved on this phone'));
@@ -1000,14 +1002,21 @@ function qrSVG(text){const g=makeQR(text,'M'),n=g.length,q=4;let p='';g.forEach(
   return`<svg viewBox="0 0 ${n+2*q} ${n+2*q}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path d="${p}" fill="#000"/></svg>`}
 
 // ===================== results tab =====================
+function reviewInput(){const pi=typeof portalIndex==='function'?portalIndex():{},hid=typeof portalHidden==='function'?portalHidden():new Set();
+  const portalL=[];Object.entries(pi).forEach(([k,L])=>L.forEach(o=>{if(!hid.has(o.id))portalL.push({...o,storeKey:k.startsWith('?')?'':k})}));
+  return{recs:Object.values(recs),plan:PLAN,gyms:GYMS,portal:portalL,reorderDays:S().reorderDays||14,keyOf:storeKeyOf}}
 function renderSum(){
+  if(scope==='review'){const D=DAYS.find(d=>d.k===day);
+    $('#sum').innerHTML=`<div class="scope seg"><button data-sc="day">${D.d} only</button><button data-sc="week">Whole week</button><button data-sc="review" class="on">Week review</button></div><div id="wrbox" style="margin-top:10px"></div>`;
+    $('#sum').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{scope=b.dataset.sc;renderSum()});
+    if(window.IVXReview)IVXReview.mount($('#wrbox'),reviewInput,{listLeft:true});return}
   const ks=scope==='day'?[day]:DAYS.map(d=>d.k);
   let t={sold:0,no:0,fu:0,skip:0,todo:0,cases:0,paid:0,orders:0,cost:0,total:0};const rows={sold:[],no:[],fu:[],skip:[]},reasons={},flav={};
   ks.forEach(k=>{const c=dayStats(k);for(const x in t)t[x]+=c[x]||0;
     stopsFor(k).forEach(s=>{const v=statusOf(s);if(!v)return;rows[v.status].push({k,s,v});(v.reasons||[]).forEach(r=>reasons[r]=(reasons[r]||0)+1);(v.items||[]).forEach(i=>flav[i.n]=(flav[i.n]||0)+i.q)})});
   if(scope==='week')Object.values(recs).filter(r=>r.kind==='revisit'&&!r.deleted&&r.status).forEach(v=>{t[v.status]++;t.total++;t.cases+=+v.cases||0;t.paid+=parseFloat(v.paid)||0;t.orders+=parseFloat(v.orderTotal)||0;t.cost+=parseFloat(v.sampleCost)||0;rows[v.status].push({k:'due',s:{name:v.store},v})});
   const done=t.total-t.todo,D=DAYS.find(d=>d.k===day);
-  let o=`<div class="scope seg"><button data-sc="day" class="${scope==='day'?'on':''}">${D.d} only</button><button data-sc="week" class="${scope==='week'?'on':''}">Whole week</button></div>
+  let o=`<div class="scope seg"><button data-sc="day" class="${scope==='day'?'on':''}">${D.d} only</button><button data-sc="week" class="${scope==='week'?'on':''}">Whole week</button><button data-sc="review" class="${scope==='review'?'on':''}">Week review</button></div>
   <div class="kgrid"><div class="k"><b>${done}/${t.total}</b><small>Visited</small></div><div class="k"><b style="color:var(--sold)">${t.sold}</b><small>Sold</small></div><div class="k"><b>${t.cases}</b><small>Cases</small></div>
   <div class="k"><b>${done?Math.round(t.sold/done*100):0}%</b><small>Close rate</small></div><div class="k"><b>${money(t.orders)}</b><small>Orders</small></div><div class="k"><b>${money(t.paid)}</b><small>Collected</small></div>
   <div class="k"><b style="color:var(--fu)">${t.fu}</b><small>Follow ups</small></div><div class="k"><b>${money(t.cost)}</b><small>Samples cost</small></div><div class="k"><b>${t.sold&&t.cost?money(t.cost/t.sold):'—'}</b><small>Cost / new acct</small></div></div>`;

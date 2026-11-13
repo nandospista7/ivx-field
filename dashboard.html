@@ -49,6 +49,7 @@ td{padding:8px;border-top:1px solid var(--line);vertical-align:top}tr:hover td{b
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="qr.js"></script>
+<script src="review.js"></script>
 <script>
 let PLAN={};
 const DAYS=[{k:'mon',d:'Mon'},{k:'tue',d:'Tue'},{k:'wed',d:'Wed'},{k:'thu',d:'Thu'},{k:'fri',d:'Fri'}];
@@ -76,6 +77,14 @@ let DIR={};function buildDir(){DIR={};DAYS.forEach(D=>((PLAN[D.k]||{}).stops||[]
 function parseRow(r){const o={...r};['reasons','alsoDone','photos'].forEach(k=>o[k]=Array.isArray(o[k])?o[k]:(o[k]?String(o[k]).split(' | ').filter(Boolean):[]));
   if(!Array.isArray(o.items)){try{o.items=o.items?JSON.parse(o.items):[]}catch(e){o.items=[]}}['cases','freeCans','freeCases'].forEach(k=>o[k]=+o[k]||0);
   ['orderTotal','paid','sampleCost','discount'].forEach(k=>o[k]=parseFloat(o[k])||0);o.deleted=String(o.deleted).toUpperCase()==='TRUE';if(!o.storeKey)o.storeKey=storeKeyOf(o.store,o.address);return o}
+let wrWeek=null,portalOrders=[];
+async function loadPortal(){try{const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  let d=null;for(const fn of ['shopify','iv-x-field']){const r=await sb.functions.invoke(fn,{body:{action:'portalOrders'}});if(!r.error&&r.data&&r.data.ok){d=r.data;break}}
+  if(!d)return;const names=Object.values(DIR).map(x=>[norm(x.name),x.storeKey]);
+  const hidden=new Set(data.rows.flatMap(r=>r.shopify?[r.shopify.linked?r.shopify.orderId:'',r.shopify.portalDup||'']:[]).filter(Boolean));
+  portalOrders=(d.orders||[]).filter(o=>!hidden.has(o.id)).map(o=>{let k=((o.customerTags||[]).find(x=>x.startsWith('ivxstore-'))||'').slice(9);
+    if(!k){const n=norm(o.customer);const h=names.find(([dn])=>dn===n||(Math.min(dn.length,n.length)>=8&&(dn.startsWith(n)||n.startsWith(dn))));k=h?h[1]:''}return{...o,storeKey:k}});
+  render()}catch(e){}}
 async function load(){
   if(!sb){setup('Supabase isn\'t set up yet: add your Project URL and publishable key to config.js.',true);return}
   const {data:{session}}=await sb.auth.getSession();if(!session){setup();return}
@@ -89,7 +98,7 @@ async function load(){
     $('#upd').innerHTML='Updated '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' · '+esc(session.user.email)+' · <a href="#" id="so" style="color:#5eead4">sign out</a>';
     $('#so').onclick=async e=>{e.preventDefault();await sb.auth.signOut();data=null;PLAN={};DIR={};setup()};
     const reps=[...new Set(data.log.map(r=>r.by).filter(Boolean))].sort();$('#rep').innerHTML='<option value="">Everyone</option>'+reps.map(r=>`<option ${r===$('#rep').value?'selected':''}>${esc(r)}</option>`).join('');
-    render();
+    render();loadPortal();
   }catch(e){setup('Couldn\'t load: '+e.message)}
 }
 function setup(err,hard){
@@ -152,7 +161,8 @@ function render(){
   const reps={};ev.forEach(e=>{const k=e.by||'Unnamed';const r=reps[k]=reps[k]||{v:0,s:0,c:0,o:0,p:0,f:0};r.v++;if(e.status==='sold')r.s++;r.c+=e.cases;r.o+=e.orderTotal;r.p+=e.paid;r.f+=e.sampleCost});
   const byDay=DAYS.map(D=>{const x={k:D.k,label:D.d,sold:0,fu:0,no:0,skip:0};all.filter(e=>e.day===D.k&&(!rep||e.by===rep)).forEach(e=>x[e.status]++);return x});
   const today=ymd(),due=stores.filter(s=>s.due&&s.due<=today);
-  let o=`<div class="kp">${[[ev.length,'Stores visited'],[sold,'Sold'],[ev.length?Math.round(sold/ev.length*100)+'%':'—','Close rate'],[sum('cases'),'Cases'],[money(sum('orderTotal')),'Order value'],[money(sum('paid')),'Collected'],
+  let o=`<div class="card full" id="wrcard" style="margin-bottom:14px"><div id="wrbox"></div></div>
+  <div class="kp">${[[ev.length,'Stores visited'],[sold,'Sold'],[ev.length?Math.round(sold/ev.length*100)+'%':'—','Close rate'],[sum('cases'),'Cases'],[money(sum('orderTotal')),'Order value'],[money(sum('paid')),'Collected'],
     [money(cost),'Samples & freebies'],[sold&&cost?money(cost/sold):'—','Cost per sale'],[scanT,'QR scans'],[due.length,'Follow-ups due']].map(([b,s])=>`<div class="k"><b>${b}</b><small>${s}</small></div>`).join('')}</div>
   <div class="grid">
    <div class="card"><h2>Outcomes by route day</h2><div class="sub">Every check-in on the five route days</div>${dayChart(byDay)}</div>
@@ -170,6 +180,8 @@ function render(){
     <br><select id="qd" style="background:#fff;color:#111;border:1px solid var(--line);margin-top:8px"><option value="">All stores</option>${DAYS.map(d=>`<option value="${d.k}">${d.d} route</option>`).join('')}<option value="sold">Only stores that bought</option></select> <button id="tg" style="background:#0f766e">Show tags</button> <button id="pr" style="background:#111">Print tags</button></div><div class="tags" id="tags"></div></div>
   </div>`;
   $('#main').innerHTML=o;
+  if(window.IVXReview){const box=$('#wrbox');box._wrWeek=wrWeek;IVXReview.mount(box,()=>({recs:data.rows,plan:PLAN,gyms:data.config.gyms||[],portal:portalOrders,reorderDays:((data.config.settings||{}).reorderDays)||14,keyOf:storeKeyOf}));
+    new MutationObserver(()=>{wrWeek=box._wrWeek}).observe(box,{childList:true})}
   drawStores(stores);$('#q').oninput=()=>drawStores(stores);
   const tg=()=>{$('#tg').textContent=tagsOn?'Hide tags':'Show tags';if(tagsOn)drawTags(stores);else $('#tags').innerHTML=''};tg();
   $('#tg').onclick=()=>{tagsOn=!tagsOn;tg()};$('#qd').onchange=()=>{tagsOn=true;tg()};$('#pr').onclick=()=>{if(!tagsOn){tagsOn=true;tg()}setTimeout(()=>window.print(),300)};
