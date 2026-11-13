@@ -38,11 +38,16 @@ td{padding:8px;border-top:1px solid var(--line);vertical-align:top}tr:hover td{b
 .tag{border:2px solid #111;border-radius:14px;padding:12px;text-align:center;break-inside:avoid;background:#fff}
 .tag .b{font:800 22px/1 'Barlow Condensed';letter-spacing:.5px}.tag .b span{color:#0f766e}.tag svg{width:100%;max-width:160px;display:block;margin:8px auto}
 .tag .cta{font-weight:800;font-size:13px}.tag .st{font-size:10px;color:#777;margin-top:4px}
+header .pg{display:flex;gap:4px;margin:0 auto 0 18px}header .pg a{color:#c9ccd2;text-decoration:none;font-weight:700;font-size:14px;padding:7px 12px;border-radius:9px}header .pg a.on{background:#fff;color:#111}
+.rp-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}.rp-bar select{color:#111;padding:9px 12px;border-radius:10px;border:1px solid var(--line);font-weight:700;min-width:280px;background:#fff}
+.rp-bar button,.rp-bar label{color:#111;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.rp-frame{width:100%;border:0;border-radius:16px;background:var(--bg);min-height:600px;display:block}
 @media print{header,.noprint,.kp,.grid>.card:not(.printme){display:none!important}main{padding:0}.card{border:0;padding:0}.tags{grid-template-columns:repeat(3,1fr)}body{background:#fff}}
 </style>
 </head>
 <body>
 <header class="noprint"><div class="hd"><h1>IV-X <span>Field</span> · Dashboard</h1>
+ <div class="pg"><a href="#" data-pg="main">Dashboard</a><a href="#reports" data-pg="reports">Reports</a></div>
  <div class="ctl"><select id="rng"><option value="week">Route week (Nov 9–13)</option><option value="all">All time</option><option value="today">Today</option><option value="mon">Mon</option><option value="tue">Tue</option><option value="wed">Wed</option><option value="thu">Thu</option><option value="fri">Fri</option></select>
  <select id="rep"><option value="">Everyone</option></select><button id="rf">Refresh</button><button class="lt" id="csv">Export CSV</button><span id="upd" style="color:#a7abb3;font-size:12px"></span></div></div></header>
 <main id="main"><div class="empty">Loading…</div></main>
@@ -144,7 +149,30 @@ function sellThroughAll(){const prods=(data.config.products||[]);const upc=id=>{
       if((e.items||[]).length||sh){stock=next;lastAt=t}if(sh)lastShelf={at:e.at,n:Object.values(sh).reduce((a,b)=>a+(+b||0),0)}});
     if(days>=0.5)out.push({k,name:(DIR[k]||{}).name||ev[0].store,perWeek:sold/days*7,days:Math.round(days),lastShelf})});
   return out.sort((a,b)=>b.perWeek-a.perWeek)}
+const pageNow=()=>location.hash==='#reports'?'reports':'main';
+function setNav(){document.querySelectorAll('header .pg a').forEach(a=>a.classList.toggle('on',a.dataset.pg===pageNow()));['#rng','#rep','#csv'].forEach(s=>{const e=document.querySelector(s);if(e)e.style.display=pageNow()==='reports'?'none':''})}
+window.addEventListener('hashchange',()=>{setNav();if(data)render()});
+const reportList=()=>Object.entries(data.config||{}).filter(([k,v])=>k.startsWith('report:')&&v&&!v.removed).map(([k,v])=>({key:k,...v})).sort((a,b)=>String(b.week||b.at||'').localeCompare(String(a.week||a.at||'')));
+let rpSel=null;
+function renderReports(){setNav();const L=reportList();if(!rpSel||!L.find(r=>r.key===rpSel))rpSel=L[0]?L[0].key:null;
+  const cur=L.find(r=>r.key===rpSel);
+  $('#main').innerHTML=`<div class="rp-bar">${L.length?`<select id="rpsel">${L.map(r=>`<option value="${esc(r.key)}" ${r.key===rpSel?'selected':''}>${esc(r.title||r.key)}</option>`).join('')}</select><button id="rpprint">Print</button>`:''}
+    <label>Add report (.html)<input id="rpfile" type="file" accept=".html,text/html" hidden></label>${cur?'<button id="rpdel" style="color:#b91c1c">Remove</button>':''}<span id="rpmsg" style="color:var(--mute);font-size:13px"></span></div>
+    ${cur?`<iframe class="rp-frame" id="rpf" sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox" title="${esc(cur.title||'Report')}"></iframe>`:`<div class="card"><h2>Reports</h2><div class="sub">No reports saved yet. Click <b>Add report</b> and pick a report file (.html). It's stored in your private database, so only signed-in team members can see it.</div></div>`}`;
+  if(cur){const f=$('#rpf');f.srcdoc=cur.html||'';f.onload=()=>{try{const d=f.contentDocument;const fit=()=>{f.style.height=(d.documentElement.scrollHeight+20)+'px'};fit();setTimeout(fit,600);setTimeout(fit,1500)}catch(e){f.style.height='2400px'}}}
+  if($('#rpsel'))$('#rpsel').onchange=e=>{rpSel=e.target.value;renderReports()};
+  if($('#rpprint'))$('#rpprint').onclick=()=>{try{$('#rpf').contentWindow.focus();$('#rpf').contentWindow.print()}catch(e){$('#rpmsg').textContent='Use your browser’s print on the report.'}};
+  $('#rpfile').onchange=async()=>{const file=$('#rpfile').files[0];if(!file)return;const html=await file.text();
+    if(!/<html|<!doctype/i.test(html)){$('#rpmsg').textContent='That isn’t a report file.';return}
+    const title=((html.match(/<title>([^<]*)<\/title>/i)||[])[1]||file.name).replace(/&amp;/g,'&').trim();const week=((title.match(/(Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct)\w*\s+\d+/)||[])[0])||'';
+    const key='report:'+title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80);
+    const value={title,html,week:new Date().toISOString(),at:new Date().toISOString(),by:''};try{const s=(await sb.auth.getSession()).data.session;value.by=(s&&s.user&&s.user.email)||''}catch(e){}
+    try{await q(sb.from('app_config').upsert({key,value,updated_at:new Date().toISOString()}));data.config[key]=value;rpSel=key;renderReports()}catch(e){$('#rpmsg').textContent='Couldn’t save: '+e.message}};
+  if($('#rpdel'))$('#rpdel').onclick=async e=>{if(e.currentTarget.dataset.sure!=='1'){e.currentTarget.dataset.sure='1';e.currentTarget.textContent='Click again to remove';return}
+    try{const v={...data.config[rpSel],removed:true,html:''};await q(sb.from('app_config').upsert({key:rpSel,value:v,updated_at:new Date().toISOString()}));data.config[rpSel]=v;rpSel=null;renderReports()}catch(err){$('#rpmsg').textContent='Couldn’t remove: '+err.message}};
+}
 function render(){
+  if(pageNow()==='reports'){renderReports();return}setNav();
   const rng=$('#rng').value,rep=$('#rep').value;
   const all=latestById(data.log.length?data.log:data.rows);
   const ev=all.filter(e=>inRange(e,rng)&&(!rep||e.by===rep));
