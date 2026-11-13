@@ -131,6 +131,9 @@ textarea{min-height:70px;resize:vertical}
 .shrow{display:block;margin:8px 0}.shrow span{display:block;font-weight:700;font-size:13px;margin-bottom:3px}.shrow select{width:100%;padding:9px;border-radius:9px;border:1px solid #d9d5cc;background:#fff;font-size:14px}
 .c-portal{background:#ede9fe;color:#5b21b6}
 
+.c-plan{background:#111;color:#fff}.wplan{background:#fff;border:1px solid var(--line,#e7e3da);border-left:4px solid #111;border-radius:10px;padding:8px 10px;margin:8px 0 2px;font-size:12.5px;line-height:1.4}.wplan svg{width:14px;height:14px;vertical-align:-2px}
+.scope.seg{flex-wrap:wrap}
+
 .gear{all:unset;cursor:pointer;font-size:18px;padding:2px 4px;margin-left:8px;color:#cfd2d8}
 .setbox{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:12px 14px}
 .setbox summary{list-style:none;cursor:pointer}.setbox summary::-webkit-details-marker{display:none}
@@ -250,6 +253,7 @@ input[type=date],input[type=email]{width:100%;font:inherit;font-size:16px;border
 let PLAN=(()=>{try{return JSON.parse(localStorage.getItem('ivx_plan')||'null')}catch(e){return null}})()||{};
 let GYMS=(()=>{try{return JSON.parse(localStorage.getItem('ivx_gyms')||'null')}catch(e){return null}})()||[];
 const DAYS=[{k:'mon',d:'Mon',t:'Astoria · LIC',date:'11/9'},{k:'tue',d:'Tue',t:'Jackson Hts · Elmhurst · Corona',date:'11/10'},{k:'wed',d:'Wed',t:'Upper East Side',date:'11/11'},{k:'thu',d:'Thu',t:'Midtown W → Murray Hill',date:'11/12'},{k:'fri',d:'Fri',t:'Gramercy · E. Village · LES',date:'11/13'}];
+const ROUTE_MON=(()=>{const t=new Date(),w=t.getDay(),m=new Date(t.getFullYear(),t.getMonth(),t.getDate(),12);m.setDate(m.getDate()+(w===0?1:w===6?2:1-w));DAYS.forEach((D,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);D.date=(d.getMonth()+1)+'/'+d.getDate()});return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0')})();
 const HEX={mon:'#e4572e',tue:'#0ea5e9',wed:'#3d5a80',thu:'#8e44ad',fri:'#c48a00'};
 const SC={sold:'var(--sold)',no:'var(--no)',fu:'var(--fu)',skip:'var(--skip)'};
 const SL={sold:'Sold',no:'No sale',fu:'Follow up',skip:'Skipped / closed'};
@@ -476,19 +480,20 @@ async function syncNow(quiet){
     const [rows,log,cfg,sc]=await Promise.all([
       q(sb.from('checkins').select('data')),
       q(sb.from('visits_log').select('data').order('at',{ascending:true}).limit(10000)),
-      q(sb.from('app_config').select('key,value')),
+      q(sb.from('app_config').select('key,value').not('key','like','report:%')),
       q(sb.from('qr_scans').select('store_key').limit(20000))]);
     (rows||[]).forEach(x=>{const r=parseRow(x.data||{});if(!r.id||outbox.includes(r.id))return;const mine=recs[r.id];if(!mine||String(r.at||'')>=String(mine.at||''))recs[r.id]=r});
     serverLog=(log||[]).map(x=>parseRow(x.data||{}));LS.set('log',serverLog);
     scans={};(sc||[]).forEach(x=>scans[x.store_key]=(scans[x.store_key]||0)+1);LS.set('scans',scans);
     if(cfg&&cfg.length&&!configDirty){const m={};cfg.forEach(x=>m[x.key]=x.value);const c=defaultConfig();config={products:m.products||c.products,pitch:m.pitch||c.pitch,settings:Object.assign(c.settings,m.settings||{})};LS.set('config',config)}
+    {const xc={};(cfg||[]).forEach(x=>{if(x.key==='autoreport'||String(x.key).startsWith('weekplan:'))xc[x.key]=x.value});xcfg=xc;LS.set('xcfg',xcfg);wkPlanC=null}
     (cfg||[]).forEach(x=>{if(String(x.key).startsWith('van:')&&!vanDirty.includes(x.key))vans[x.key]=x.value});LS.set('vans',vans);
     {const rp=(cfg||[]).find(x=>x.key==='route_plan'),gy=(cfg||[]).find(x=>x.key==='gyms');
      if(rp&&rp.value&&JSON.stringify(rp.value)!==localStorage.getItem('ivx_plan')){PLAN=JSON.parse(JSON.stringify(rp.value));localStorage.setItem('ivx_plan',JSON.stringify(rp.value));prepPlan();if(typeof portalIndex==='function')portalIndex._at=-1}
      if(gy&&Array.isArray(gy.value)&&JSON.stringify(gy.value)!==localStorage.getItem('ivx_gyms')){GYMS=JSON.parse(JSON.stringify(gy.value));localStorage.setItem('ivx_gyms',JSON.stringify(gy.value));prepGyms()}}
     persist();lastOk=Date.now();lastErr='';$('#banner').classList.remove('on');
   }catch(e){lastErr=String(e.message||e);if(/JWT|token|auth/i.test(lastErr)){banner('Your sign-in expired — sign in again in Settings.')}else if(!quiet)banner('Couldn\'t reach the server. Check-ins are safe on this phone and will upload automatically. ('+lastErr+')')}
-  finally{syncing=false;syncLabel();render();setTimeout(()=>{relinkOnce();shopPump();portalPull()},300)}
+  finally{syncing=false;syncLabel();render();setTimeout(()=>{relinkOnce();shopPump();Promise.resolve(portalPull()).catch(()=>{}).then(autoReport)},300)}
 }
 function startRealtime(){if(!sb||rtChan)return;
   rtChan=sb.channel('checkins-live').on('postgres_changes',{event:'*',schema:'public',table:'checkins'},()=>{clearTimeout(rtTimer);rtTimer=setTimeout(()=>syncNow(true),1200)})
@@ -594,12 +599,15 @@ function renderRoute(){
   $('#pbar').innerHTML=['sold','fu','no','skip'].map(s=>`<span style="width:${c[s]/c.total*100}%;background:${SC[s]}"></span>`).join('');
   $('#pnums').innerHTML=`<div><b>${c.done}/${c.total}</b>visited</div><div><b style="color:var(--sold)">${c.sold}</b>sold</div><div><b>${c.cases}</b>cases</div><div><b style="color:var(--no)">${c.no}</b>no sale</div><div><b style="color:var(--fu)">${c.fu}</b>follow up</div>`;
   drawMap();renderVan();renderGCard();
-  const st=stopsFor(day).filter(s=>{const v=statusOf(s);return filter==='all'||(filter==='todo'?!v:!!v)});
+  const WP=weekPlan(),PD=WP&&WP.days.find(x=>x.k===day),PK=PD?PD.keys:new Set();
+  let st=stopsFor(day).filter(s=>{const v=statusOf(s);return filter==='all'||(filter==='todo'?!v:!!v)});
+  if(filter==='todo'&&PK.size)st=st.filter(s=>PK.has(s.storeKey)).concat(st.filter(s=>!PK.has(s.storeKey)));
   let o=`<div class="empty" style="padding:6px 0 0;text-align:left;font-size:13px"><b style="color:${HEX[day]}">${D.d} ${D.date}</b> · ${esc(D.t)}</div>`;
+  if(PD&&PD.stops.length)o+=`<div class="wplan">${I('calendar')} <b>This week's plan: ${PD.stops.length} stops</b>${PD.calls?` (${PD.calls} follow-up${PD.calls>1?'s':''})`:''} · load <b>${PD.load} cs</b>${PD.byFlavor.filter(f=>f.q).length?' — '+PD.byFlavor.filter(f=>f.q).map(f=>f.q+' '+esc(f.n)).join(', '):''}. Planned stops are marked and listed first.</div>`;
   if(!st.length)o+=`<div class="empty">${filter==='todo'?'Every stop on this day is checked off.':'Nothing checked off yet.'}</div>`;
   st.forEach(s=>{
     const v=statusOf(s),stg=stageOf(s.storeKey);
-    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+(s.lr?'<span class="chip c-lr">LITTLE RICK</span>':'')+(s.premium?'<span class="chip c-prem">PREMIUM</span>':'')+shopChip(v)+portalChip(s.storeKey)+
+    const chips=(s.kind==='prospect'?'<span class="chip c-pro">PROSPECT</span>':s.kind==='walk'?'<span class="chip c-walk">WALK-IN</span>':'')+(s.lr?'<span class="chip c-lr">LITTLE RICK</span>':'')+(s.premium?'<span class="chip c-prem">PREMIUM</span>':'')+(PK.has(s.storeKey)&&!v?'<span class="chip c-plan">THIS WEEK</span>':'')+shopChip(v)+portalChip(s.storeKey)+
       (stg!=='Prospect'?`<span class="chip" style="background:${STAGE_COL[stg]}1f;color:${STAGE_COL[stg]}">${stg.toUpperCase()}</span>`:'')+(scans[s.storeKey]?`<span class="chip c-order">${I('qr')} ${scans[s.storeKey]} QR scans</span>`:'');
     const ph=(s.contact||'').match(/\d{3}-?\d{3}-?\d{4}/);
     const numStyle=v?`background:${SC[v.status]};color:#fff;border:0;border-radius:50%`:(s.kind==='acct'?`background:${HEX[day]}`:s.kind==='walk'?'background:#4f46e5':'');
@@ -630,7 +638,7 @@ function legLink(stops,k){const enc=encodeURIComponent;const a=s=>s.lat&&s.kind=
   if(mapApp()==='apple')return'https://maps.apple.com/?dirflg=d'+stops.map(s=>'&daddr='+enc(a(s))).join('');
   return'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+enc(a(dest))+(wps.length?'&waypoints='+wps.map(s=>enc(a(s))).join('%7C'):'')}
 function renderGCard(){
-  const todo=stopsFor(day).filter(s=>!statusOf(s));
+  let todo=stopsFor(day).filter(s=>!statusOf(s));{const WP=weekPlan(),PD=WP&&WP.days.find(x=>x.k===day);if(PD&&PD.keys.size)todo=todo.filter(s=>PD.keys.has(s.storeKey)).concat(todo.filter(s=>!PD.keys.has(s.storeKey)))}
   let o=`<div class="gcard">`;
   if(todo.length){const next=todo.slice(0,LEG),legs=Math.ceil(todo.length/LEG);
     o+=`<div class="gt"><h4>${I('nav')} Drive the next ${next.length} stop${next.length>1?'s':''}</h4><span style="font-size:12px;color:var(--mute)">${todo.length} left · ${legs} leg${legs>1?'s':''}</span></div>
@@ -1005,18 +1013,25 @@ function qrSVG(text){const g=makeQR(text,'M'),n=g.length,q=4;let p='';g.forEach(
 function reviewInput(){const pi=typeof portalIndex==='function'?portalIndex():{},hid=typeof portalHidden==='function'?portalHidden():new Set();
   const portalL=[];Object.entries(pi).forEach(([k,L])=>L.forEach(o=>{if(!hid.has(o.id))portalL.push({...o,storeKey:k.startsWith('?')?'':k})}));
   return{recs:Object.values(recs),plan:PLAN,gyms:GYMS,portal:portalL,reorderDays:S().reorderDays||14,keyOf:storeKeyOf}}
+let xcfg=LS.get('xcfg',{});
+function nxInput(start){const R=reviewInput(),today=ymd();const ns=start||IVXReview.addD(IVXReview.defaultWeek(today),7);
+  return{...R,today,nextStart:ns,products:P().map(p=>p.name),mapApp:mapApp(),perDay:+S().stopsPerDay||15,dayLabels:Object.fromEntries(DAYS.map(D=>[D.k,D.t])),frozen:xcfg['weekplan:'+ns]||null}}
+let wkPlanC=null;function weekPlan(){if(!window.IVXReview||!planReady())return null;const sig=ROUTE_MON+'|'+Object.keys(recs).length+'|'+(portal.at||0)+'|'+JSON.stringify(xcfg['weekplan:'+ROUTE_MON]||'').length+'|'+Object.values(recs).reduce((t,r)=>t+(r.at||'').length,0);
+  if(wkPlanC&&wkPlanC.sig===sig)return wkPlanC.N;try{const N=IVXReview.nextWeek(nxInput(ROUTE_MON));const m={};N.days.forEach(d=>{m[d.k]=d;d.keys=new Set(d.stops.map(s=>s.key))});wkPlanC={sig,N};return N}catch(e){console.warn(e);return null}}
+let autoBusy=false;async function autoReport(){if(autoBusy||!sb||!session||!navigator.onLine||!window.IVXReview||!planReady())return;if(Date.now()-(LS.get('autoAt',0))<900000)return;autoBusy=true;
+  try{const r=await IVXReview.autoSave(sb,()=>nxInput(),xcfg,{by:(session.user&&session.user.email)||'app'});LS.set('autoAt',Date.now());if(r){LS.set('xcfg',xcfg);wkPlanC=null}}catch(e){console.warn('auto report',e)}finally{autoBusy=false}}
 function renderSum(){
-  if(scope==='review'){const D=DAYS.find(d=>d.k===day);
-    $('#sum').innerHTML=`<div class="scope seg"><button data-sc="day">${D.d} only</button><button data-sc="week">Whole week</button><button data-sc="review" class="on">Week review</button></div><div id="wrbox" style="margin-top:10px"></div>`;
+  if(scope==='review'||scope==='next'){const D=DAYS.find(d=>d.k===day);
+    $('#sum').innerHTML=`<div class="scope seg"><button data-sc="day">${D.d} only</button><button data-sc="week">Whole week</button><button data-sc="review" class="${scope==='review'?'on':''}">Week review</button><button data-sc="next" class="${scope==='next'?'on':''}">Next week</button></div><div id="wrbox" style="margin-top:10px"></div>`;
     $('#sum').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{scope=b.dataset.sc;renderSum()});
-    if(window.IVXReview)IVXReview.mount($('#wrbox'),reviewInput,{listLeft:true});return}
+    if(window.IVXReview){if(scope==='next')IVXReview.mountNext($('#wrbox'),()=>nxInput());else IVXReview.mount($('#wrbox'),reviewInput,{listLeft:true})}return}
   const ks=scope==='day'?[day]:DAYS.map(d=>d.k);
   let t={sold:0,no:0,fu:0,skip:0,todo:0,cases:0,paid:0,orders:0,cost:0,total:0};const rows={sold:[],no:[],fu:[],skip:[]},reasons={},flav={};
   ks.forEach(k=>{const c=dayStats(k);for(const x in t)t[x]+=c[x]||0;
     stopsFor(k).forEach(s=>{const v=statusOf(s);if(!v)return;rows[v.status].push({k,s,v});(v.reasons||[]).forEach(r=>reasons[r]=(reasons[r]||0)+1);(v.items||[]).forEach(i=>flav[i.n]=(flav[i.n]||0)+i.q)})});
   if(scope==='week')Object.values(recs).filter(r=>r.kind==='revisit'&&!r.deleted&&r.status).forEach(v=>{t[v.status]++;t.total++;t.cases+=+v.cases||0;t.paid+=parseFloat(v.paid)||0;t.orders+=parseFloat(v.orderTotal)||0;t.cost+=parseFloat(v.sampleCost)||0;rows[v.status].push({k:'due',s:{name:v.store},v})});
   const done=t.total-t.todo,D=DAYS.find(d=>d.k===day);
-  let o=`<div class="scope seg"><button data-sc="day" class="${scope==='day'?'on':''}">${D.d} only</button><button data-sc="week" class="${scope==='week'?'on':''}">Whole week</button><button data-sc="review" class="${scope==='review'?'on':''}">Week review</button></div>
+  let o=`<div class="scope seg"><button data-sc="day" class="${scope==='day'?'on':''}">${D.d} only</button><button data-sc="week" class="${scope==='week'?'on':''}">Whole week</button><button data-sc="review" class="${scope==='review'?'on':''}">Week review</button><button data-sc="next" class="${scope==='next'?'on':''}">Next week</button></div>
   <div class="kgrid"><div class="k"><b>${done}/${t.total}</b><small>Visited</small></div><div class="k"><b style="color:var(--sold)">${t.sold}</b><small>Sold</small></div><div class="k"><b>${t.cases}</b><small>Cases</small></div>
   <div class="k"><b>${done?Math.round(t.sold/done*100):0}%</b><small>Close rate</small></div><div class="k"><b>${money(t.orders)}</b><small>Orders</small></div><div class="k"><b>${money(t.paid)}</b><small>Collected</small></div>
   <div class="k"><b style="color:var(--fu)">${t.fu}</b><small>Follow ups</small></div><div class="k"><b>${money(t.cost)}</b><small>Samples cost</small></div><div class="k"><b>${t.sold&&t.cost?money(t.cost/t.sold):'—'}</b><small>Cost / new acct</small></div></div>`;
@@ -1031,14 +1046,14 @@ function renderSum(){
   const rs=Object.entries(reasons).sort((a,b)=>b[1]-a[1]);
   if(rs.length)o+=`<div class="sec"><h4>Top objections</h4>${rs.map(([r,n])=>`<div class="it">${esc(r)} <b style="float:right">${n}</b></div>`).join('')}</div>`;
   o+=sec('Closed / skipped','var(--skip)',rows.skip,({k,s,v})=>`<div class="it">${dl(k)}<b>${esc(s.name)}</b>${v.notes?' — '+esc(v.notes):''}</div>`);
-  {const since=scope==='day'?null:'2026-11-09';const dayIso=D&&D.date?('2026-'+D.date.split('/').map(x=>x.padStart(2,'0')).join('-')):null;
+  {const since=scope==='day'?null:ROUTE_MON;const dayIso=D&&D.date?(ROUTE_MON.slice(0,4)+'-'+D.date.split('/').map(x=>x.padStart(2,'0')).join('-')):null;
    const lk=portalHidden();const po=(portal.orders||[]).filter(x=>!lk.has(x.id)).filter(x=>scope==='day'?String(x.at).slice(0,10)===dayIso:String(x.at).slice(0,10)>=since);
    if(po.length)o+=`<div class="sec"><h4 style="color:#6d28d9">Portal reorders (IV-X Retailer) · ${po.length} · ${po.reduce((a,x)=>a+x.cases,0)} cs · ${money(po.reduce((a,x)=>a+x.total,0))}</h4>${po.map(x=>`<div class="it"><b>${esc(x.customer||'Retailer')}</b> — ${x.cases} cs · ${money(x.total)} <span class="m" style="float:right">${esc(md(x.at))} ${esc(x.name)}</span></div>`).join('')}</div>`}
   if(!done)o+=`<div class="empty">No check-ins yet${scope==='day'?' for '+D.d:''}. Results fill in as you check stores off.</div>`;
   o+=`<button class="save" id="copyr">Copy ${scope==='day'?D.d+"'s":"the week's"} report</button><a class="gbtn" style="background:#111;margin-top:10px" href="dashboard.html" target="_blank" rel="noopener">${I('chart')} Open manager dashboard</a>`;
   $('#sum').innerHTML=o;
   $('#sum').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{scope=b.dataset.sc;renderSum()});
-  $('#copyr').onclick=()=>{const L=[`IV-X NYC route report — ${scope==='day'?D.d+' '+D.date+' · '+D.t:'Week of 11/9'}`,`Visited ${done}/${t.total} · Sold ${t.sold} · ${t.cases} cases${t.orders?' · '+money(t.orders)+' in orders':''} · Follow-ups ${t.fu} · No sale ${t.no} · Collected ${money(t.paid)}${t.cost?' · Samples '+money(t.cost):''}`,''];
+  $('#copyr').onclick=()=>{const L=[`IV-X NYC route report — ${scope==='day'?D.d+' '+D.date+' · '+D.t:'Week of '+DAYS[0].date}`,`Visited ${done}/${t.total} · Sold ${t.sold} · ${t.cases} cases${t.orders?' · '+money(t.orders)+' in orders':''} · Follow-ups ${t.fu} · No sale ${t.no} · Collected ${money(t.paid)}${t.cost?' · Samples '+money(t.cost):''}`,''];
     if(fl.length){L.push('FLAVORS');fl.forEach(([n,q])=>L.push(`- ${n}: ${q} cs`));L.push('')}
     [['SOLD','sold'],['FOLLOW UP','fu'],['NO SALE','no'],['CLOSED/SKIPPED','skip']].forEach(([h,k])=>{if(!rows[k].length)return;L.push(h);rows[k].forEach(({k:dk,s,v})=>L.push(`- ${scope==='week'?(dk==='due'?'F/U':DAYS.find(d=>d.k===dk).d)+': ':''}${s.name}${k==='sold'?` — ${v.cases||0} cs${v.bought?' ('+v.bought+')':''}`:''}${(v.reasons||[]).length?' — '+v.reasons.join(', '):''}${v.paid?` — ${money(v.paid)} collected`:''}${v.notes?' — "'+v.notes+'"':''}`));L.push('')});
     copy(L.join('\n'),'Report copied')};
