@@ -69,7 +69,9 @@ const slug=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-
 const storeKeyOf=(name,addr)=>slug(name)+'_'+((String(addr||'').match(/[\d-]+/)||[''])[0].replace(/-/g,''));
 const ymd=d=>{d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const CFG=window.IVX_CONFIG||{};const SB_URL=String(CFG.SUPABASE_URL||'').trim().replace(/\/$/,''),SB_KEY=String(CFG.SUPABASE_KEY||'').trim();
-const sb=(window.supabase&&SB_URL&&SB_KEY)?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'ivx_sb_auth'}}):null;
+const EMBEDDED=(()=>{try{return window.top!==window.self}catch(e){return true}})();
+const STORAGE_OK=(()=>{try{localStorage.setItem('ivx_t','1');localStorage.removeItem('ivx_t');return true}catch(e){return false}})();
+let sb=null;try{sb=(window.supabase&&SB_URL&&SB_KEY)?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:STORAGE_OK,autoRefreshToken:true,storageKey:'ivx_sb_auth'}}):null}catch(e){sb=null}
 const signed={};const photoUrl=t=>signed[String(t).slice(3)]||'';
 async function signPhotos(rows){const paths=[...new Set(rows.flatMap(r=>(r.photos||[]).concat(r.signature?[r.signature]:[])).filter(p=>String(p).startsWith('sb:')).map(p=>String(p).slice(3)))].filter(p=>!signed[p]);
   for(let i=0;i<paths.length;i+=100){try{const {data}=await sb.storage.from('photos').createSignedUrls(paths.slice(i,i+100),3600);(data||[]).forEach(d=>{if(d.signedUrl)signed[d.path]=d.signedUrl})}catch(e){}}}
@@ -155,15 +157,15 @@ window.addEventListener('hashchange',()=>{setNav();if(data)render()});
 const reportList=()=>Object.entries(data.config||{}).filter(([k,v])=>k.startsWith('report:')&&v&&!v.removed).map(([k,v])=>({key:k,...v})).sort((a,b)=>String(b.week||b.at||'').localeCompare(String(a.week||a.at||'')));
 let rpSel=null;
 function renderReports(){setNav();const L=reportList();if(!rpSel||!L.find(r=>r.key===rpSel))rpSel=L[0]?L[0].key:null;
-  const cur=L.find(r=>r.key===rpSel);
+  const cur=L.find(r=>r.key===rpSel);const bad=cur&&/<main id="main">/.test(cur.html||'');
   $('#main').innerHTML=`<div class="rp-bar">${L.length?`<select id="rpsel">${L.map(r=>`<option value="${esc(r.key)}" ${r.key===rpSel?'selected':''}>${esc(r.title||r.key)}</option>`).join('')}</select><button id="rpprint">Print</button>`:''}
     <label>Add report (.html)<input id="rpfile" type="file" accept=".html,text/html" hidden></label>${cur?'<button id="rpdel" style="color:#b91c1c">Remove</button>':''}<span id="rpmsg" style="color:var(--mute);font-size:13px"></span></div>
-    ${cur?`<iframe class="rp-frame" id="rpf" sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox" title="${esc(cur.title||'Report')}"></iframe>`:`<div class="card"><h2>Reports</h2><div class="sub">No reports saved yet. Click <b>Add report</b> and pick a report file (.html). It's stored in your private database, so only signed-in team members can see it.</div></div>`}`;
-  if(cur){const f=$('#rpf');f.srcdoc=cur.html||'';f.onload=()=>{try{const d=f.contentDocument;const fit=()=>{f.style.height=(d.documentElement.scrollHeight+20)+'px'};fit();setTimeout(fit,600);setTimeout(fit,1500)}catch(e){f.style.height='2400px'}}}
+    ${bad?`<div class="card"><h2>This saved report is a copy of the dashboard page</h2><div class="sub">Click <b>Remove</b> (twice), then <b>Add report</b> and pick the report file (IVX-Week-in-Review…html).</div></div>`:cur?`<iframe class="rp-frame" id="rpf" sandbox="allow-same-origin allow-modals allow-popups allow-popups-to-escape-sandbox" title="${esc(cur.title||'Report')}"></iframe>`:`<div class="card"><h2>Reports</h2><div class="sub">No reports saved yet. Click <b>Add report</b> and pick a report file (.html). It's stored in your private database, so only signed-in team members can see it.</div></div>`}`;
+  if(cur&&!bad){const f=$('#rpf');f.srcdoc=cur.html||'';f.onload=()=>{try{const d=f.contentDocument;const fit=()=>{f.style.height=(d.documentElement.scrollHeight+20)+'px'};fit();setTimeout(fit,600);setTimeout(fit,1500)}catch(e){f.style.height='2400px'}}}
   if($('#rpsel'))$('#rpsel').onchange=e=>{rpSel=e.target.value;renderReports()};
   if($('#rpprint'))$('#rpprint').onclick=()=>{try{$('#rpf').contentWindow.focus();$('#rpf').contentWindow.print()}catch(e){$('#rpmsg').textContent='Use your browser’s print on the report.'}};
   $('#rpfile').onchange=async()=>{const file=$('#rpfile').files[0];if(!file)return;const html=await file.text();
-    if(!/<html|<!doctype/i.test(html)){$('#rpmsg').textContent='That isn’t a report file.';return}
+    if(!/<html|<!doctype/i.test(html)||/IV-X <span>Field<\/span> · Dashboard|<main id="main">/.test(html)){$('#rpmsg').textContent='That file is a copy of the dashboard page, not a report. Pick the report file (IVX-Week-in-Review…html).';return}
     const title=((html.match(/<title>([^<]*)<\/title>/i)||[])[1]||file.name).replace(/&amp;/g,'&').trim();const week=((title.match(/(Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct)\w*\s+\d+/)||[])[0])||'';
     const key='report:'+title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,80);
     const value={title,html,week:new Date().toISOString(),at:new Date().toISOString(),by:''};try{const s=(await sb.auth.getSession()).data.session;value.by=(s&&s.user&&s.user.email)||''}catch(e){}
@@ -238,7 +240,9 @@ function drawTags(stores){
     return`<div class="tag"><div class="b">IV-X <span>●</span></div>${qrSVG(u)}<div class="cta">Scan for IV-X on TikTok</div><div class="st">${esc(s.name)}</div></div>`}).join('')||'<div class="empty">No stores match</div>';
 }
 $('#rng').onchange=()=>data&&render();$('#rep').onchange=()=>data&&render();$('#rf').onclick=load;
-load();setInterval(()=>{if(!document.hidden)load()},120000);
+if(EMBEDDED){const u=location.href.split('#')[0];$('header .ctl')&&($('header .ctl').style.display='none');
+  $('#main').innerHTML=`<div class="card" style="max-width:560px;margin:40px auto;text-align:center"><h2 style="margin-top:0">Open the dashboard in its own tab</h2><div class="sub" style="margin-bottom:16px">Inside Shopify, your browser blocks the dashboard's private sign-in, so it can't load here. Open it directly — and bookmark it for next time.</div><a href="${u}" target="_blank" rel="noopener" style="display:inline-block;background:#111;color:#fff;text-decoration:none;font-weight:800;padding:12px 18px;border-radius:12px">Open IV-X dashboard ↗</a><div class="sub" style="margin-top:14px;font-size:12.5px">${esc(u)}</div></div>`}
+else{load();setInterval(()=>{if(!document.hidden)load()},120000)}
 </script>
 </body>
 </html>
